@@ -333,12 +333,30 @@ Contributions welcome! Please:
 4. Ensure all tests pass
 5. Submit a pull request
 
+## Attribution
+
+This project was heavily inspired by
+[ATFile](https://github.com/ziodotsh/atfile) by
+[@ducky.ws](https://bsky.app/profile/ducky.ws) (Ducky). ATFile is a pioneering
+Bash-based tool for storing and retrieving files on the AT Protocol, and served
+as the conceptual foundation for aqfile's implementation in TypeScript/Deno.
+
+**Special thanks to Ducky** for creating ATFile and demonstrating the
+possibilities of file storage on AT Protocol!
+
+> **Note**: Primary development of ATFile now takes place on
+> [Tangled (@zio.sh/atfile)](https://tangled.org/@zio.sh/atfile), with GitHub
+> serving as a mirror.
+
 ## Related Projects
 
+- [ATFile](https://github.com/ziodotsh/atfile) - Original Bash implementation
+  for AT Protocol file storage
 - [AT Protocol](https://atproto.com/) - Decentralized social networking protocol
 - [Bluesky](https://bsky.app/) - Social app built on AT Protocol
 - [@atcute](https://github.com/mary-ext/atcute) - AT Protocol TypeScript
   utilities
+- [Tangled](https://tangled.org/) - Git hosting powered by AT Protocol
 
 ## Support
 

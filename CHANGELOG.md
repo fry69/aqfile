@@ -4,6 +4,7 @@
 - show helpful pdsls.dev and atproto-browser links
 - implement show command
 - implement get command
+- add attribution to ATFile
 
 ### v0.1.2
 
