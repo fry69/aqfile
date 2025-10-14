@@ -9,7 +9,8 @@
     "check": "deno fmt --check && deno lint && deno check && deno task test",
     "test": "deno test -A --ignore=tests/e2e.test.ts",
     "test:e2e": "deno test --env-file=./.env.e2e -A tests/e2e.test.ts",
-    "e2e": "deno run --env-file=./.env.e2e -A ./src/main.ts",
+    "aqfile:e2e": "deno run --env-file=./.env.e2e -A ./src/main.ts",
+    "aqfile": "deno run --env-file=./.env -A ./src/main.ts",
     "lex": "lex-cli generate -c ./lex.config.ts"
   },
   "imports": {
@@ -22,5 +23,10 @@
     "@std/path": "jsr:@std/path@^1.0.8",
     "@std/semver": "jsr:@std/semver@^1.0.3",
     "mime-types": "npm:mime-types@^3.0.1"
+  },
+  "lint": {
+    "exclude": [
+      "src/lexicons/*"
+    ]
   }
 }
