@@ -16,24 +16,6 @@ import { AtpAgent } from "@atproto/api";
 import type { NetAltqAqfile } from "../src/lexicons/index.ts";
 import { calculateChecksum, getFileMetadata } from "../src/utils.ts";
 
-// Load environment variables from .env.e2e
-const envPath = join(Deno.cwd(), ".env.e2e");
-try {
-  const envContent = await Deno.readTextFile(envPath);
-  for (const line of envContent.split("\n")) {
-    const trimmed = line.trim();
-    if (trimmed && !trimmed.startsWith("#")) {
-      const [key, ...valueParts] = trimmed.split("=");
-      const value = valueParts.join("=");
-      if (key && value) {
-        Deno.env.set(key, value);
-      }
-    }
-  }
-} catch {
-  console.warn("Warning: .env.e2e file not found, using existing env vars");
-}
-
 const SERVICE = Deno.env.get("AQFILE_SERVICE") || "https://bsky.social";
 const USERNAME = Deno.env.get("AQFILE_USERNAME");
 const PASSWORD = Deno.env.get("AQFILE_PASSWORD");
