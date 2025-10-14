@@ -17,15 +17,15 @@ Deno.test("config - getConfigPath returns correct path based on OS", async () =>
 Deno.test("config - mergeConfigs prioritizes later configs", async () => {
   const { mergeConfigs } = await import("../src/config.ts");
 
-  const config1 = { service: "https://example1.com", identifier: "user1" };
+  const config1 = { service: "https://example1.com", handle: "user1" };
   const config2 = { service: "https://example2.com" };
-  const config3 = { password: "pass123" };
+  const config3 = { appPassword: "pass123" };
 
   const merged = mergeConfigs(config1, config2, config3);
 
   expect(merged.service).toBe("https://example2.com"); // overridden by config2
-  expect(merged.identifier).toBe("user1"); // from config1
-  expect(merged.password).toBe("pass123"); // from config3
+  expect(merged.handle).toBe("user1"); // from config1
+  expect(merged.appPassword).toBe("pass123"); // from config3
 });
 
 Deno.test("config - loadEnvConfig reads environment variables", async () => {
@@ -33,19 +33,19 @@ Deno.test("config - loadEnvConfig reads environment variables", async () => {
 
   // Set test env vars
   Deno.env.set("AQFILE_SERVICE", "https://test.example.com");
-  Deno.env.set("AQFILE_USERNAME", "testuser");
-  Deno.env.set("AQFILE_PASSWORD", "testpass");
+  Deno.env.set("AQFILE_HANDLE", "testuser");
+  Deno.env.set("AQFILE_APP_PASSWORD", "testpass");
 
   const config = loadEnvConfig();
 
   expect(config.service).toBe("https://test.example.com");
-  expect(config.identifier).toBe("testuser");
-  expect(config.password).toBe("testpass");
+  expect(config.handle).toBe("testuser");
+  expect(config.appPassword).toBe("testpass");
 
   // Clean up
   Deno.env.delete("AQFILE_SERVICE");
-  Deno.env.delete("AQFILE_USERNAME");
-  Deno.env.delete("AQFILE_PASSWORD");
+  Deno.env.delete("AQFILE_HANDLE");
+  Deno.env.delete("AQFILE_APP_PASSWORD");
 });
 
 Deno.test("config - loadConfig includes defaults", async () => {
@@ -63,8 +63,8 @@ Deno.test("config - saveConfig and loadConfigFile work together", async () => {
 
   const testConfig = {
     service: "https://test-pds.example.com",
-    identifier: "test.user",
-    password: "test-password-123",
+    handle: "test.user",
+    appPassword: "test-password-123",
   };
 
   // Save config
@@ -74,8 +74,8 @@ Deno.test("config - saveConfig and loadConfigFile work together", async () => {
   const loaded = await loadConfigFile();
 
   expect(loaded.service).toBe(testConfig.service);
-  expect(loaded.identifier).toBe(testConfig.identifier);
-  expect(loaded.password).toBe(testConfig.password);
+  expect(loaded.handle).toBe(testConfig.handle);
+  expect(loaded.appPassword).toBe(testConfig.appPassword);
 
   // Clean up - delete the test config file
   try {

@@ -38,10 +38,10 @@ const VERSION = "0.1.0";
 interface UploadOptions {
   /** The URL of the PDS service (e.g., "https://bsky.social") */
   serviceUrl: string;
-  /** AT Protocol handle or DID for authentication */
-  identifier: string;
-  /** AT Protocol password or app password */
-  password: string;
+  /** AT Protocol handle (e.g., "alice.bsky.social") or DID */
+  handle: string;
+  /** App Password from https://bsky.app/settings/app-passwords */
+  appPassword: string;
   /** Path to the file to upload */
   filePath: string;
 }
@@ -68,9 +68,9 @@ interface DeleteOptions {
   /** The URL of the PDS service */
   serviceUrl: string;
   /** AT Protocol handle or DID for authentication */
-  identifier: string;
-  /** AT Protocol password or app password */
-  password: string;
+  handle: string;
+  /** App Password from https://bsky.app/settings/app-passwords */
+  appPassword: string;
   /** The record key (rkey) of the file to delete */
   rkey: string;
 }
@@ -82,9 +82,9 @@ interface ListOptions {
   /** The URL of the PDS service */
   serviceUrl: string;
   /** AT Protocol handle or DID for authentication */
-  identifier: string;
-  /** AT Protocol password or app password */
-  password: string;
+  handle: string;
+  /** App Password from https://bsky.app/settings/app-passwords */
+  appPassword: string;
   /** Maximum number of records to retrieve. Defaults to 100 */
   limit?: number;
 }
@@ -115,14 +115,14 @@ interface ListOptions {
  * ```
  */
 async function uploadFile(options: UploadOptions): Promise<UploadResult> {
-  const { serviceUrl, identifier, password, filePath } = options;
+  const { serviceUrl, handle, appPassword, filePath } = options;
 
   // Initialize agent
   const agent = new AtpAgent({ service: serviceUrl });
 
   // Login
-  await agent.login({ identifier, password });
-  console.log(`✓ Logged in as ${identifier}`);
+  await agent.login({ identifier: handle, password: appPassword });
+  console.log(`✓ Logged in as ${handle}`);
 
   // Read file
   const data = await Deno.readFile(filePath);
@@ -216,13 +216,13 @@ async function uploadFile(options: UploadOptions): Promise<UploadResult> {
  * ```
  */
 async function listRecords(options: ListOptions): Promise<void> {
-  const { serviceUrl, identifier, password, limit = 100 } = options;
+  const { serviceUrl, handle, appPassword, limit = 100 } = options;
 
   // Initialize agent
   const agent = new AtpAgent({ service: serviceUrl });
 
   // Login
-  await agent.login({ identifier, password });
+  await agent.login({ identifier: handle, password: appPassword });
 
   // Get DID
   const did = agent.session?.did;
@@ -318,14 +318,14 @@ async function listRecords(options: ListOptions): Promise<void> {
  * ```
  */
 async function deleteRecord(options: DeleteOptions): Promise<void> {
-  const { serviceUrl, identifier, password, rkey } = options;
+  const { serviceUrl, handle, appPassword, rkey } = options;
 
   // Initialize agent
   const agent = new AtpAgent({ service: serviceUrl });
 
   // Login
-  await agent.login({ identifier, password });
-  console.log(`✓ Logged in as ${identifier}`);
+  await agent.login({ identifier: handle, password: appPassword });
+  console.log(`✓ Logged in as ${handle}`);
 
   // Get DID
   const did = agent.session?.did;
@@ -390,13 +390,22 @@ Usage:
   aqfile list              List all uploaded files
   aqfile delete <rkey>     Delete a file record (and its blob)
   aqfile config            Show config file location
+  aqfile config setup      Set up credentials interactively
+  aqfile config clear      Clear stored credentials
   aqfile help              Show this help
   aqfile version           Show version
 
+Options:
+  -h, --help               Show this help
+  -v, --version            Show version
+  -s, --service <url>      PDS service URL (default: https://bsky.social)
+  --handle <handle>        AT Protocol handle (e.g., alice.bsky.social) or DID
+  --app-password <pass>    App Password (generate at https://bsky.app/settings/app-passwords)
+
 Environment variables:
   AQFILE_SERVICE           PDS service URL (default: https://bsky.social)
-  AQFILE_USERNAME          AT Protocol identifier (handle or DID)
-  AQFILE_PASSWORD          AT Protocol password or app password
+  AQFILE_HANDLE            AT Protocol handle or DID
+  AQFILE_APP_PASSWORD      App Password from https://bsky.app/settings/app-passwords
 
 Config file:
   Configuration can be stored in a JSON file at:
@@ -407,15 +416,20 @@ Config file:
   Example config.json:
   {
     "service": "https://bsky.social",
-    "identifier": "alice.bsky.social",
-    "password": "your-app-password"
+    "handle": "alice.bsky.social",
+    "appPassword": "your-app-password-here"
   }
+
+  ⚠️  IMPORTANT: Always use an App Password, never your account password!
+      Generate one at: https://bsky.app/settings/app-passwords
 
 Examples:
   aqfile upload document.pdf
   aqfile upload image.png --service https://my-pds.example.com
   aqfile list
   aqfile delete 3jxyz123abc
+  aqfile config setup
+  aqfile config clear
 `);
 }
 
@@ -428,13 +442,11 @@ Examples:
 async function main() {
   const args = parseArgs(Deno.args, {
     boolean: ["help", "version"],
-    string: ["service", "identifier", "password"],
+    string: ["service", "handle", "app-password"],
     alias: {
       h: "help",
       v: "version",
       s: "service",
-      i: "identifier",
-      p: "password",
     },
   });
 
@@ -463,15 +475,57 @@ async function main() {
   }
 
   if (command === "config") {
+    const subcommand = args._[1]?.toString();
     const configPath = getConfigPath();
+
+    if (subcommand === "setup") {
+      // Interactive setup
+      const {
+        isInteractive,
+        promptForConfig,
+        promptToSave,
+        saveConfig: saveCfg,
+      } = await import(
+        "./config.ts"
+      );
+
+      if (!isInteractive()) {
+        console.error("Error: Interactive setup requires a terminal");
+        Deno.exit(1);
+      }
+
+      const config = await promptForConfig();
+
+      if (config.handle && config.appPassword) {
+        if (await promptToSave()) {
+          await saveCfg(config);
+          console.log(`\n✓ Configuration saved to: ${configPath}`);
+        } else {
+          console.log("\n Configuration not saved");
+        }
+      }
+
+      Deno.exit(0);
+    }
+
+    if (subcommand === "clear") {
+      const { clearConfig } = await import("./config.ts");
+      await clearConfig();
+      console.log(`✓ Configuration cleared: ${configPath}`);
+      Deno.exit(0);
+    }
+
+    // Show config
     console.log(`Config file location: ${configPath}`);
 
     try {
       const config = await loadConfig();
       console.log("\nCurrent configuration:");
-      console.log(`  Service:    ${config.service || "(not set)"}`);
-      console.log(`  Identifier: ${config.identifier || "(not set)"}`);
-      console.log(`  Password:   ${config.password ? "***" : "(not set)"}`);
+      console.log(`  Service:     ${config.service || "(not set)"}`);
+      console.log(`  Handle:      ${config.handle || "(not set)"}`);
+      console.log(
+        `  App Password:${config.appPassword ? " ***" : " (not set)"}`,
+      );
     } catch {
       console.log("\nNo configuration found");
     }
@@ -496,25 +550,61 @@ async function main() {
     }
 
     // Load configuration from all sources (file, env, CLI args)
-    const config = await loadConfig({
+    let config = await loadConfig({
       service: args.service,
-      identifier: args.identifier,
-      password: args.password,
+      handle: args.handle,
+      appPassword: args["app-password"],
     });
 
-    if (!config.identifier || !config.password) {
-      console.error(
-        "Error: Credentials not provided. Set AQFILE_USERNAME and AQFILE_PASSWORD environment variables,",
+    // Check if credentials are missing
+    if (!config.handle || !config.appPassword) {
+      const {
+        isInteractive,
+        promptForConfig,
+        promptToSave,
+        saveConfig: saveCfg,
+      } = await import(
+        "./config.ts"
       );
-      console.error(`       or create a config file at: ${getConfigPath()}`);
-      Deno.exit(1);
+
+      // If interactive and missing credentials, offer to set them up
+      if (isInteractive()) {
+        console.log("\n⚠️  No credentials configured.");
+        console.log("   Would you like to set them up now?\n");
+
+        const newConfig = await promptForConfig();
+        config = { ...config, ...newConfig };
+
+        // If CLI args were provided, ask if they want to save
+        if (args.handle || args["app-password"]) {
+          if (await promptToSave()) {
+            await saveCfg(config);
+            console.log(`\n✓ Configuration saved to: ${getConfigPath()}`);
+          }
+        } else {
+          // Always ask to save if configured interactively
+          if (await promptToSave()) {
+            await saveCfg(config);
+            console.log(`\n✓ Configuration saved to: ${getConfigPath()}`);
+          }
+        }
+      } else {
+        console.error(
+          "Error: Credentials not provided. Set AQFILE_HANDLE and AQFILE_APP_PASSWORD environment variables,",
+        );
+        console.error(`       or create a config file at: ${getConfigPath()}`);
+        console.error(
+          `       or run 'aqfile config setup' to configure interactively.`,
+        );
+        Deno.exit(1);
+      }
     }
 
     try {
       await uploadFile({
         serviceUrl: config.service!,
-        identifier: config.identifier,
-        password: config.password,
+        handle: config.handle!,
+        appPassword: config.appPassword!,
         filePath,
       });
       console.log("\n✓ Upload complete");
@@ -530,23 +620,26 @@ async function main() {
     // Load configuration
     const config = await loadConfig({
       service: args.service,
-      identifier: args.identifier,
-      password: args.password,
+      handle: args.handle,
+      appPassword: args["app-password"],
     });
 
-    if (!config.identifier || !config.password) {
+    if (!config.handle || !config.appPassword) {
       console.error(
-        "Error: Credentials not provided. Set AQFILE_USERNAME and AQFILE_PASSWORD environment variables,",
+        "Error: Credentials not provided. Set AQFILE_HANDLE and AQFILE_APP_PASSWORD environment variables,",
       );
       console.error(`       or create a config file at: ${getConfigPath()}`);
+      console.error(
+        `       or run 'aqfile config setup' to configure interactively.`,
+      );
       Deno.exit(1);
     }
 
     try {
       await listRecords({
         serviceUrl: config.service!,
-        identifier: config.identifier,
-        password: config.password,
+        handle: config.handle,
+        appPassword: config.appPassword,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -568,23 +661,26 @@ async function main() {
     // Load configuration
     const config = await loadConfig({
       service: args.service,
-      identifier: args.identifier,
-      password: args.password,
+      handle: args.handle,
+      appPassword: args["app-password"],
     });
 
-    if (!config.identifier || !config.password) {
+    if (!config.handle || !config.appPassword) {
       console.error(
-        "Error: Credentials not provided. Set AQFILE_USERNAME and AQFILE_PASSWORD environment variables,",
+        "Error: Credentials not provided. Set AQFILE_HANDLE and AQFILE_APP_PASSWORD environment variables,",
       );
       console.error(`       or create a config file at: ${getConfigPath()}`);
+      console.error(
+        `       or run 'aqfile config setup' to configure interactively.`,
+      );
       Deno.exit(1);
     }
 
     try {
       await deleteRecord({
         serviceUrl: config.service!,
-        identifier: config.identifier,
-        password: config.password,
+        handle: config.handle,
+        appPassword: config.appPassword,
         rkey,
       });
       console.log("\n✓ Delete complete");

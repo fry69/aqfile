@@ -29,10 +29,10 @@ import { dirname, join } from "@std/path";
 export interface Config {
   /** The URL of the PDS service (e.g., "https://bsky.social") */
   service?: string;
-  /** AT Protocol handle or DID */
-  identifier?: string;
-  /** AT Protocol password or app password */
-  password?: string;
+  /** AT Protocol handle (e.g., "alice.bsky.social") or DID (e.g., "did:plc:...") */
+  handle?: string;
+  /** App Password from https://bsky.app/settings/app-passwords */
+  appPassword?: string;
 }
 
 /**
@@ -117,16 +117,16 @@ export async function loadConfigFile(): Promise<Config> {
  * Load configuration from environment variables
  *
  * Reads configuration from the following environment variables:
- * - `AQFILE_SERVICE` or `SERVICE` - PDS service URL
- * - `AQFILE_USERNAME` or `IDENTIFIER` - AT Protocol handle or DID
- * - `AQFILE_PASSWORD` or `PASSWORD` - AT Protocol password
+ * - `AQFILE_SERVICE` - PDS service URL
+ * - `AQFILE_HANDLE` - AT Protocol handle or DID
+ * - `AQFILE_APP_PASSWORD` - App Password from https://bsky.app/settings/app-passwords
  *
  * @returns A config object with values from environment variables
  *
  * @example
  * ```ts
  * Deno.env.set("AQFILE_SERVICE", "https://bsky.social");
- * Deno.env.set("AQFILE_USERNAME", "alice.bsky.social");
+ * Deno.env.set("AQFILE_HANDLE", "alice.bsky.social");
  *
  * const config = loadEnvConfig();
  * console.log(config.service); // "https://bsky.social"
@@ -134,9 +134,9 @@ export async function loadConfigFile(): Promise<Config> {
  */
 export function loadEnvConfig(): Config {
   return {
-    service: Deno.env.get("AQFILE_SERVICE") || Deno.env.get("SERVICE"),
-    identifier: Deno.env.get("AQFILE_USERNAME") || Deno.env.get("IDENTIFIER"),
-    password: Deno.env.get("AQFILE_PASSWORD") || Deno.env.get("PASSWORD"),
+    service: Deno.env.get("AQFILE_SERVICE"),
+    handle: Deno.env.get("AQFILE_HANDLE"),
+    appPassword: Deno.env.get("AQFILE_APP_PASSWORD"),
   };
 }
 
@@ -152,13 +152,13 @@ export function loadEnvConfig(): Config {
  * @example
  * ```ts
  * const defaults = { service: "https://bsky.social" };
- * const userConfig = { identifier: "alice.bsky.social" };
+ * const userConfig = { handle: "alice.bsky.social" };
  * const cliArgs = { service: "https://custom-pds.example.com" };
  *
  * const merged = mergeConfigs(defaults, userConfig, cliArgs);
  * // Result: {
  * //   service: "https://custom-pds.example.com",  // from cliArgs
- * //   identifier: "alice.bsky.social"              // from userConfig
+ * //   handle: "alice.bsky.social"                  // from userConfig
  * // }
  * ```
  */
@@ -167,8 +167,10 @@ export function mergeConfigs(...configs: Config[]): Config {
 
   for (const config of configs) {
     if (config.service !== undefined) merged.service = config.service;
-    if (config.identifier !== undefined) merged.identifier = config.identifier;
-    if (config.password !== undefined) merged.password = config.password;
+    if (config.handle !== undefined) merged.handle = config.handle;
+    if (config.appPassword !== undefined) {
+      merged.appPassword = config.appPassword;
+    }
   }
 
   return merged;
@@ -227,8 +229,8 @@ export async function loadConfig(cliConfig: Config = {}): Promise<Config> {
  * // Save user credentials
  * await saveConfig({
  *   service: "https://bsky.social",
- *   identifier: "alice.bsky.social",
- *   password: "hunter2"
+ *   handle: "alice.bsky.social",
+ *   appPassword: "app-password-here"
  * });
  *
  * // Config saved to:
@@ -252,4 +254,111 @@ export async function saveConfig(config: Config): Promise<void> {
 
   const data = JSON.stringify(config, null, 2);
   await Deno.writeTextFile(configPath, data);
+}
+
+/**
+ * Clear the saved configuration file
+ *
+ * Deletes the config file if it exists. This removes all stored credentials.
+ *
+ * @returns A promise that resolves when the file is deleted, or immediately if it doesn't exist
+ *
+ * @example
+ * ```ts
+ * await clearConfig();
+ * console.log("Credentials cleared");
+ * ```
+ */
+export async function clearConfig(): Promise<void> {
+  const configPath = getConfigPath();
+
+  try {
+    await Deno.remove(configPath);
+  } catch (error) {
+    if (!(error instanceof Deno.errors.NotFound)) {
+      throw error;
+    }
+    // File doesn't exist, nothing to clear
+  }
+}
+
+/**
+ * Check if running in an interactive terminal
+ *
+ * @returns true if stdin is a TTY (interactive terminal)
+ */
+export function isInteractive(): boolean {
+  return Deno.stdin.isTerminal();
+}
+
+/**
+ * Prompt user for input in an interactive terminal
+ *
+ * @param prompt - The prompt message to display
+ * @param defaultValue - Optional default value
+ * @returns The user's input or default value
+ */
+async function promptUser(prompt: string, defaultValue = ""): Promise<string> {
+  const defaultText = defaultValue ? ` [${defaultValue}]` : "";
+  await Deno.stdout.write(
+    new TextEncoder().encode(`${prompt}${defaultText}: `),
+  );
+
+  const buf = new Uint8Array(1024);
+  const n = await Deno.stdin.read(buf);
+  if (n === null) return defaultValue;
+
+  const input = new TextDecoder().decode(buf.subarray(0, n)).trim();
+  return input || defaultValue;
+}
+
+/**
+ * Prompt user to set up credentials interactively
+ *
+ * Only works in interactive terminals. Prompts for service, handle, and app password,
+ * then offers to save them to the config file.
+ *
+ * @returns A promise resolving to the entered configuration
+ *
+ * @example
+ * ```ts
+ * if (isInteractive()) {
+ *   const config = await promptForConfig();
+ *   console.log("Config set up:", config);
+ * }
+ * ```
+ */
+export async function promptForConfig(): Promise<Config> {
+  console.log("\n🔧 aqfile Configuration Setup");
+  console.log("================================\n");
+
+  const service = await promptUser(
+    "PDS service URL",
+    "https://bsky.social",
+  );
+
+  const handle = await promptUser(
+    "Your handle (e.g., alice.bsky.social)",
+  );
+
+  console.log(
+    "\n⚠️  App Password required (not your account password!)",
+  );
+  console.log(
+    "   Generate one at: https://bsky.app/settings/app-passwords\n",
+  );
+
+  const appPassword = await promptUser("App Password");
+
+  return { service, handle, appPassword };
+}
+
+/**
+ * Ask user if they want to save credentials
+ *
+ * @returns true if user wants to save, false otherwise
+ */
+export async function promptToSave(): Promise<boolean> {
+  const response = await promptUser("\nSave these credentials? (y/n)", "y");
+  return response.toLowerCase() === "y" || response.toLowerCase() === "yes";
 }
