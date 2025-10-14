@@ -184,6 +184,15 @@ async function uploadFile(options: UploadOptions): Promise<UploadResult> {
   console.log(`✓ Record created: ${createRes.data.uri}`);
   console.log(`  CID: ${createRes.data.cid}`);
 
+  // Show inspection links
+  console.log(`\n🔍 Inspect your upload:`);
+  console.log(`   https://pdsls.dev/${createRes.data.uri}`);
+  console.log(
+    `   https://atproto-browser.vercel.app/${
+      createRes.data.uri.replace("at://", "at/")
+    }`,
+  );
+
   return {
     blob,
     record: createRes.data,
