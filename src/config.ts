@@ -32,7 +32,7 @@ export interface Config {
   /** AT Protocol handle (e.g., "alice.bsky.social") or DID (e.g., "did:plc:...") */
   handle?: string;
   /** App Password from https://bsky.app/settings/app-passwords */
-  appPassword?: string;
+  password?: string;
 }
 
 /**
@@ -136,7 +136,7 @@ export function loadEnvConfig(): Config {
   return {
     service: Deno.env.get("AQFILE_SERVICE"),
     handle: Deno.env.get("AQFILE_HANDLE"),
-    appPassword: Deno.env.get("AQFILE_APP_PASSWORD"),
+    password: Deno.env.get("AQFILE_APP_PASSWORD"),
   };
 }
 
@@ -168,8 +168,8 @@ export function mergeConfigs(...configs: Config[]): Config {
   for (const config of configs) {
     if (config.service !== undefined) merged.service = config.service;
     if (config.handle !== undefined) merged.handle = config.handle;
-    if (config.appPassword !== undefined) {
-      merged.appPassword = config.appPassword;
+    if (config.password !== undefined) {
+      merged.password = config.password;
     }
   }
 
@@ -237,7 +237,7 @@ export async function loadConfig(cliConfig: Config = {}): Promise<Config> {
  * await saveConfig({
  *   service: "https://bsky.social",
  *   handle: "alice.bsky.social",
- *   appPassword: "app-password-here"
+ *   password: "app-password-here"
  * });
  *
  * // Config saved to:
@@ -444,9 +444,9 @@ export async function promptForConfig(): Promise<Config> {
     "   Generate one at: https://bsky.app/settings/app-passwords\n",
   );
 
-  const appPassword = await promptUser("App Password");
+  const password = await promptUser("App Password");
 
-  return { service, handle, appPassword };
+  return { service, handle, password };
 }
 
 /**

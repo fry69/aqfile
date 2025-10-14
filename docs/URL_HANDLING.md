@@ -97,7 +97,7 @@ aqfile upload file.txt  # Error in non-interactive mode
 {
   "service": "bsky.social",
   "handle": "alice.bsky.social",
-  "appPassword": "your-app-password"
+  "password": "your-app-password"
 }
 ```
 

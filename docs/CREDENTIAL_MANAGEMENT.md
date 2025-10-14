@@ -12,7 +12,7 @@ setup, and better credential management.
 | Concept       | Old Name                | New CLI Flag     | New Code Variable | New Env Variable      |
 | ------------- | ----------------------- | ---------------- | ----------------- | --------------------- |
 | User identity | `identifier`/`username` | `--handle`       | `handle`          | `AQFILE_HANDLE`       |
-| App password  | `password`              | `--app-password` | `appPassword`     | `AQFILE_APP_PASSWORD` |
+| App password  | `password`              | `--app-password` | `password`        | `AQFILE_APP_PASSWORD` |
 | PDS server    | `service`               | `--service`      | `service`         | `AQFILE_SERVICE`      |
 
 ### Rationale
@@ -147,7 +147,7 @@ export AQFILE_APP_PASSWORD="app-password-here"
 {
   "service": "https://bsky.social",
   "handle": "alice.bsky.social",
-  "appPassword": "app-password-here"
+  "password": "app-password-here"
 }
 ```
 
@@ -158,7 +158,7 @@ Users can run `aqfile config setup` to easily migrate or create new config.
 All interfaces and function signatures have been updated. Search and replace:
 
 - `identifier` → `handle`
-- `password` → `appPassword`
+- `password` → `password` (unchanged internally)
 - `AQFILE_USERNAME` → `AQFILE_HANDLE`
 - `AQFILE_PASSWORD` → `AQFILE_APP_PASSWORD`
 

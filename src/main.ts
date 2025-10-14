@@ -41,7 +41,7 @@ interface UploadOptions {
   /** AT Protocol handle (e.g., "alice.bsky.social") or DID */
   handle: string;
   /** App Password from https://bsky.app/settings/app-passwords */
-  appPassword: string;
+  password: string;
   /** Path to the file to upload */
   filePath: string;
 }
@@ -70,7 +70,7 @@ interface DeleteOptions {
   /** AT Protocol handle or DID for authentication */
   handle: string;
   /** App Password from https://bsky.app/settings/app-passwords */
-  appPassword: string;
+  password: string;
   /** The record key (rkey) of the file to delete */
   rkey: string;
 }
@@ -84,7 +84,7 @@ interface ListOptions {
   /** AT Protocol handle or DID for authentication */
   handle: string;
   /** App Password from https://bsky.app/settings/app-passwords */
-  appPassword: string;
+  password: string;
   /** Maximum number of records to retrieve. Defaults to 100 */
   limit?: number;
 }
@@ -115,13 +115,13 @@ interface ListOptions {
  * ```
  */
 async function uploadFile(options: UploadOptions): Promise<UploadResult> {
-  const { serviceUrl, handle, appPassword, filePath } = options;
+  const { serviceUrl, handle, password, filePath } = options;
 
   // Initialize agent
   const agent = new AtpAgent({ service: serviceUrl });
 
   // Login
-  await agent.login({ identifier: handle, password: appPassword });
+  await agent.login({ identifier: handle, password: password });
   console.log(`✓ Logged in as ${handle}`);
 
   // Read file
@@ -216,13 +216,13 @@ async function uploadFile(options: UploadOptions): Promise<UploadResult> {
  * ```
  */
 async function listRecords(options: ListOptions): Promise<void> {
-  const { serviceUrl, handle, appPassword, limit = 100 } = options;
+  const { serviceUrl, handle, password, limit = 100 } = options;
 
   // Initialize agent
   const agent = new AtpAgent({ service: serviceUrl });
 
   // Login
-  await agent.login({ identifier: handle, password: appPassword });
+  await agent.login({ identifier: handle, password: password });
 
   // Get DID
   const did = agent.session?.did;
@@ -318,13 +318,13 @@ async function listRecords(options: ListOptions): Promise<void> {
  * ```
  */
 async function deleteRecord(options: DeleteOptions): Promise<void> {
-  const { serviceUrl, handle, appPassword, rkey } = options;
+  const { serviceUrl, handle, password, rkey } = options;
 
   // Initialize agent
   const agent = new AtpAgent({ service: serviceUrl });
 
   // Login
-  await agent.login({ identifier: handle, password: appPassword });
+  await agent.login({ identifier: handle, password: password });
   console.log(`✓ Logged in as ${handle}`);
 
   // Get DID
@@ -417,7 +417,7 @@ Config file:
   {
     "service": "https://bsky.social",
     "handle": "alice.bsky.social",
-    "appPassword": "your-app-password-here"
+    "password": "your-app-password-here"
   }
 
   ⚠️  IMPORTANT: Always use an App Password, never your account password!
@@ -496,7 +496,7 @@ async function main() {
 
       const config = await promptForConfig();
 
-      if (config.handle && config.appPassword) {
+      if (config.handle && config.password) {
         if (await promptToSave()) {
           await saveCfg(config);
           console.log(`\n✓ Configuration saved to: ${configPath}`);
@@ -524,7 +524,7 @@ async function main() {
       console.log(`  Service:     ${config.service || "(not set)"}`);
       console.log(`  Handle:      ${config.handle || "(not set)"}`);
       console.log(
-        `  App Password:${config.appPassword ? " ***" : " (not set)"}`,
+        `  App Password:${config.password ? " ***" : " (not set)"}`,
       );
     } catch {
       console.log("\nNo configuration found");
@@ -553,11 +553,11 @@ async function main() {
     let config = await loadConfig({
       service: args.service,
       handle: args.handle,
-      appPassword: args["app-password"],
+      password: args["app-password"],
     });
 
     // Check if credentials are missing
-    if (!config.handle || !config.appPassword) {
+    if (!config.handle || !config.password) {
       const {
         isInteractive,
         promptForConfig,
@@ -604,7 +604,7 @@ async function main() {
       await uploadFile({
         serviceUrl: config.service!,
         handle: config.handle!,
-        appPassword: config.appPassword!,
+        password: config.password!,
         filePath,
       });
       console.log("\n✓ Upload complete");
@@ -621,10 +621,10 @@ async function main() {
     const config = await loadConfig({
       service: args.service,
       handle: args.handle,
-      appPassword: args["app-password"],
+      password: args["app-password"],
     });
 
-    if (!config.handle || !config.appPassword) {
+    if (!config.handle || !config.password) {
       console.error(
         "Error: Credentials not provided. Set AQFILE_HANDLE and AQFILE_APP_PASSWORD environment variables,",
       );
@@ -639,7 +639,7 @@ async function main() {
       await listRecords({
         serviceUrl: config.service!,
         handle: config.handle,
-        appPassword: config.appPassword,
+        password: config.password,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -662,10 +662,10 @@ async function main() {
     const config = await loadConfig({
       service: args.service,
       handle: args.handle,
-      appPassword: args["app-password"],
+      password: args["app-password"],
     });
 
-    if (!config.handle || !config.appPassword) {
+    if (!config.handle || !config.password) {
       console.error(
         "Error: Credentials not provided. Set AQFILE_HANDLE and AQFILE_APP_PASSWORD environment variables,",
       );
@@ -680,7 +680,7 @@ async function main() {
       await deleteRecord({
         serviceUrl: config.service!,
         handle: config.handle,
-        appPassword: config.appPassword,
+        password: config.password,
         rkey,
       });
       console.log("\n✓ Delete complete");

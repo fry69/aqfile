@@ -19,13 +19,13 @@ Deno.test("config - mergeConfigs prioritizes later configs", async () => {
 
   const config1 = { service: "https://example1.com", handle: "user1" };
   const config2 = { service: "https://example2.com" };
-  const config3 = { appPassword: "pass123" };
+  const config3 = { password: "pass123" };
 
   const merged = mergeConfigs(config1, config2, config3);
 
   expect(merged.service).toBe("https://example2.com"); // overridden by config2
   expect(merged.handle).toBe("user1"); // from config1
-  expect(merged.appPassword).toBe("pass123"); // from config3
+  expect(merged.password).toBe("pass123"); // from config3
 });
 
 Deno.test("config - loadEnvConfig reads environment variables", async () => {
@@ -40,7 +40,7 @@ Deno.test("config - loadEnvConfig reads environment variables", async () => {
 
   expect(config.service).toBe("https://test.example.com");
   expect(config.handle).toBe("testuser");
-  expect(config.appPassword).toBe("testpass");
+  expect(config.password).toBe("testpass");
 
   // Clean up
   Deno.env.delete("AQFILE_SERVICE");
@@ -64,7 +64,7 @@ Deno.test("config - saveConfig and loadConfigFile work together", async () => {
   const testConfig = {
     service: "https://test-pds.example.com",
     handle: "test.user",
-    appPassword: "test-password-123",
+    password: "test-password-123",
   };
 
   // Save config
@@ -75,7 +75,7 @@ Deno.test("config - saveConfig and loadConfigFile work together", async () => {
 
   expect(loaded.service).toBe(testConfig.service);
   expect(loaded.handle).toBe(testConfig.handle);
-  expect(loaded.appPassword).toBe(testConfig.appPassword);
+  expect(loaded.password).toBe(testConfig.password);
 
   // Clean up - delete the test config file
   try {

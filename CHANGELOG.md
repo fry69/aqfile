@@ -4,6 +4,7 @@
 - cleanup credentials naming
 - add option to clear stored credentials
 - smart URL normalization for service URLs
+- revert internal variable names back to password
 
 ### v0.1.0
 
