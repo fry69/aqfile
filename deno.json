@@ -11,7 +11,8 @@
     "test:e2e": "deno test --env-file=./.env.e2e -A tests/e2e.test.ts",
     "aqfile:e2e": "deno run --env-file=./.env.e2e -A ./src/main.ts",
     "aqfile": "deno run -A ./src/main.ts",
-    "lex": "lex-cli generate -c ./lex.config.ts"
+    "lex": "lex-cli generate -c ./lex.config.ts",
+    "release": "deno run -A tools/release.ts"
   },
   "imports": {
     "@atcute/lex-cli": "npm:@atcute/lex-cli@^2.2.2",

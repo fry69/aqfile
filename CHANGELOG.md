@@ -6,6 +6,7 @@
 - implement get command
 - add attribution to ATFile
 - add release script
+- complete release script
 
 ### v0.1.2
 

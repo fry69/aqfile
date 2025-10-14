@@ -159,12 +159,93 @@ if (!testResult.success) {
 console.log();
 console.log(green("✓") + " All tests passed!");
 console.log();
-console.log(bold("Release preparation complete!"));
+console.log(bold("Creating release..."));
 console.log();
-console.log("Next steps:");
+
+// Git commit
 console.log(
-  `  1. Commit: ${yellow(`git commit -am "chore: release v${nextVersion}"`)}`,
+  `${
+    bold("Committing changes...")
+  } git commit -am "chore: release v${nextVersion}"`,
 );
-console.log(`  2. Tag: ${yellow(`git tag -a v${nextVersion} -m "Release ${nextVersion}"`)}`);
-console.log(`  3. Push: ${yellow("git push && git push --tags")}`);
+const commitCommand = new Deno.Command("git", {
+  args: ["commit", "-am", `chore: release v${nextVersion}`],
+  cwd: ROOT_DIR,
+  stdout: "inherit",
+  stderr: "inherit",
+});
+
+const commitResult = await commitCommand.output();
+if (!commitResult.success) {
+  console.log();
+  console.error(red("✗") + " Git commit failed. Please check git status.");
+  Deno.exit(1);
+}
+console.log(green("✓") + " Changes committed");
+
+// Git tag
+console.log();
+console.log(
+  `${
+    bold("Creating tag...")
+  } git tag -a v${nextVersion} -m "Release ${nextVersion}"`,
+);
+const tagCommand = new Deno.Command("git", {
+  args: ["tag", "-a", `v${nextVersion}`, "-m", `Release ${nextVersion}`],
+  cwd: ROOT_DIR,
+  stdout: "inherit",
+  stderr: "inherit",
+});
+
+const tagResult = await tagCommand.output();
+if (!tagResult.success) {
+  console.log();
+  console.error(red("✗") + " Git tag creation failed.");
+  Deno.exit(1);
+}
+console.log(green("✓") + " Tag created");
+
+// Git push
+console.log();
+console.log(`${bold("Pushing to GitHub...")} git push && git push --tags`);
+const pushCommand = new Deno.Command("git", {
+  args: ["push"],
+  cwd: ROOT_DIR,
+  stdout: "inherit",
+  stderr: "inherit",
+});
+
+const pushResult = await pushCommand.output();
+if (!pushResult.success) {
+  console.log();
+  console.error(red("✗") + " Git push failed.");
+  Deno.exit(1);
+}
+
+const pushTagsCommand = new Deno.Command("git", {
+  args: ["push", "--tags"],
+  cwd: ROOT_DIR,
+  stdout: "inherit",
+  stderr: "inherit",
+});
+
+const pushTagsResult = await pushTagsCommand.output();
+if (!pushTagsResult.success) {
+  console.log();
+  console.error(red("✗") + " Git push tags failed.");
+  Deno.exit(1);
+}
+
+console.log(green("✓") + " Pushed to GitHub");
+console.log();
+console.log(green(bold("🎉 Release v" + nextVersion + " complete!")));
+console.log();
+console.log(
+  `  View on GitHub: ${
+    yellow(`https://github.com/fry69/aqfile/releases/tag/v${nextVersion}`)
+  }`,
+);
+console.log(
+  `  View on JSR: ${yellow(`https://jsr.io/@fry69/aqfile@${nextVersion}`)}`,
+);
 console.log();
