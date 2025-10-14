@@ -1,3 +1,6 @@
+[![JSR](https://jsr.io/badges/@fry69/aqfile)](https://jsr.io/@fry69/aqfile)
+[![JSR Score](https://jsr.io/badges/@fry69/aqfile/score)](https://jsr.io/@fry69/aqfile/score)
+
 # aqfile
 
 Upload files to AT Protocol PDS with metadata and checksums.
@@ -70,8 +73,8 @@ to find the rkey.
 
 ```bash
 export AQFILE_SERVICE=https://bsky.social
-export AQFILE_USERNAME=alice.bsky.social
-export AQFILE_PASSWORD=your-app-password
+export AQFILE_HANDLE=alice.bsky.social
+export AQFILE_APP_PASSWORD=your-app-password
 ```
 
 #### Config File
@@ -85,7 +88,7 @@ Create a config file at:
 ```json
 {
   "service": "https://bsky.social",
-  "identifier": "alice.bsky.social",
+  "handle": "alice.bsky.social",
   "password": "your-app-password"
 }
 ```
@@ -95,8 +98,8 @@ Create a config file at:
 ```bash
 aqfile upload file.txt \
   --service https://my-pds.example.com \
-  --identifier alice.example.com \
-  --password your-app-password
+  --handle alice.example.com \
+  --app-password your-app-password
 ```
 
 ## Commands
@@ -115,7 +118,7 @@ aqfile upload photo.jpg
 aqfile upload video.mp4 --service https://my-pds.example.com
 
 # Upload with inline credentials
-aqfile upload data.json -i alice.example.com -p your-app-password
+aqfile upload data.json --handle alice.example.com --app-password your-app-password
 ```
 
 ### `aqfile list`
@@ -217,8 +220,8 @@ deno task lex
 # Create .env.e2e with test credentials
 # IMPORTANT: Use App Password from https://bsky.app/settings/app-passwords
 echo 'AQFILE_SERVICE=https://altq.net' > .env.e2e
-echo 'AQFILE_USERNAME=test.altq.net' >> .env.e2e
-echo 'AQFILE_PASSWORD=your-app-password' >> .env.e2e
+echo 'AQFILE_HANDLE=test.altq.net' >> .env.e2e
+echo 'AQFILE_APP_PASSWORD=your-app-password' >> .env.e2e
 
 # Test CLI
 deno task e2e upload test.txt

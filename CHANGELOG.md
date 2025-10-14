@@ -1,3 +1,8 @@
+### v0.1.2 (unreleased)
+
+- add badges
+- fix outdated README wording
+
 ### v0.1.1
 
 - save credentials to config file after first run
