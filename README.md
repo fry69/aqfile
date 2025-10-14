@@ -147,6 +147,65 @@ List all uploaded files.
 - **MIME TYPE**: Content type
 - **NAME**: Original filename
 
+### `aqfile show <rkey>`
+
+Show detailed metadata for an uploaded file.
+
+**Arguments:**
+
+- `<rkey>`: Record key from `aqfile list`
+
+**Output:**
+
+Displays comprehensive information including:
+
+- Record URI and CID
+- Creation timestamp
+- File information (name, size, MIME type, modification time)
+- Checksum details (algorithm and hash)
+- Blob CID
+- Links to external inspection tools (pdsls.dev, atproto-browser)
+
+**Example:**
+
+```bash
+aqfile show 3m35jjrc5b62d
+```
+
+### `aqfile get <rkey>`
+
+Retrieve the content of an uploaded file.
+
+**Arguments:**
+
+- `<rkey>`: Record key from `aqfile list`
+
+**Options:**
+
+- `--output <file>`: Save content to a file instead of stdout
+
+**Behavior:**
+
+- Without `--output`: Outputs file content to stdout (useful for piping)
+- With `--output`: Saves content to the specified file
+- Interactive mode: Warns when outputting binary content to terminal
+
+**Examples:**
+
+```bash
+# Output to stdout
+aqfile get 3m35jjrc5b62d
+
+# Pipe to another command
+aqfile get 3m35jjrc5b62d | grep "pattern"
+
+# Save to file
+aqfile get 3m35jjrc5b62d --output downloaded.txt
+
+# View in pager
+aqfile get 3m35jjrc5b62d | less
+```
+
 ### `aqfile delete <rkey>`
 
 Delete a file record and its blob.

@@ -2,7 +2,8 @@
 
 - mention interactive setup in README
 - show helpful pdsls.dev and atproto-browser links
-
+- implement show command
+- implement get command
 
 ### v0.1.2
 

@@ -4,8 +4,8 @@
  *
  * Requires credentials in .env.e2e file:
  * - AQFILE_SERVICE
- * - AQFILE_USERNAME
- * - AQFILE_PASSWORD
+ * - AQFILE_HANDLE
+ * - AQFILE_APP_PASSWORD
  *
  * Run with: deno task test:e2e
  */
@@ -17,12 +17,12 @@ import type { NetAltqAqfile } from "../src/lexicons/index.ts";
 import { calculateChecksum, getFileMetadata } from "../src/utils.ts";
 
 const SERVICE = Deno.env.get("AQFILE_SERVICE") || "https://bsky.social";
-const USERNAME = Deno.env.get("AQFILE_USERNAME");
-const PASSWORD = Deno.env.get("AQFILE_PASSWORD");
+const HANDLE = Deno.env.get("AQFILE_HANDLE");
+const PASSWORD = Deno.env.get("AQFILE_APP_PASSWORD");
 
-if (!USERNAME || !PASSWORD) {
+if (!HANDLE || !PASSWORD) {
   console.error(
-    "Error: AQFILE_USERNAME and AQFILE_PASSWORD must be set in .env.e2e",
+    "Error: AQFILE_HANDLE and AQFILE_APP_PASSWORD must be set in .env.e2e",
   );
   Deno.exit(1);
 }
@@ -32,7 +32,7 @@ const COLLECTION = "net.altq.aqfile";
 // Helper to create a test agent
 async function createAgent(): Promise<AtpAgent> {
   const agent = new AtpAgent({ service: SERVICE });
-  await agent.login({ identifier: USERNAME!, password: PASSWORD! });
+  await agent.login({ identifier: HANDLE!, password: PASSWORD! });
   return agent;
 }
 
@@ -540,6 +540,266 @@ Deno.test({
         await deleteTestRecord(agent, result.rkey);
       } finally {
         await Deno.remove(filePath);
+      }
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
+});
+
+Deno.test({
+  name: "e2e - show command displays full metadata",
+  async fn() {
+    const agent = await createAgent();
+    const testContent = "Test content for show command";
+    const filePath = await createTestFile("test-show.txt", testContent);
+
+    try {
+      const result = await uploadTestFile(agent, filePath);
+
+      // Test show command via CLI
+      const showCommand = new Deno.Command("deno", {
+        args: [
+          "run",
+          "-A",
+          "./src/main.ts",
+          "show",
+          result.rkey,
+          "--service",
+          SERVICE,
+          "--handle",
+          HANDLE!,
+          "--app-password",
+          PASSWORD!,
+        ],
+        stdout: "piped",
+        stderr: "piped",
+      });
+
+      const showOutput = await showCommand.output();
+      const showText = new TextDecoder().decode(showOutput.stdout);
+
+      // Verify output contains expected information
+      expect(showText).toContain("File Record:");
+      expect(showText).toContain(result.rkey);
+      expect(showText).toContain("URI:");
+      expect(showText).toContain("CID:");
+      expect(showText).toContain("File Information:");
+      expect(showText).toContain("test-show.txt");
+      expect(showText).toContain("Checksum:");
+      expect(showText).toContain("sha256");
+      expect(showText).toContain("Inspect this record:");
+      expect(showText).toContain("https://pdsls.dev/");
+      expect(showText).toContain("https://atproto-browser.vercel.app/");
+
+      // Cleanup
+      await deleteTestRecord(agent, result.rkey);
+    } finally {
+      await Deno.remove(filePath);
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
+});
+
+Deno.test({
+  name: "e2e - get command retrieves file content",
+  async fn() {
+    const agent = await createAgent();
+    const testContent = "This is the file content to retrieve!";
+    const filePath = await createTestFile("test-get.txt", testContent);
+
+    try {
+      const result = await uploadTestFile(agent, filePath);
+
+      // Test get command via CLI (output to stdout)
+      const getCommand = new Deno.Command("deno", {
+        args: [
+          "run",
+          "-A",
+          "./src/main.ts",
+          "get",
+          result.rkey,
+          "--service",
+          SERVICE,
+          "--handle",
+          HANDLE!,
+          "--app-password",
+          PASSWORD!,
+        ],
+        stdout: "piped",
+        stderr: "piped",
+      });
+
+      const getOutput = await getCommand.output();
+      const retrievedContent = new TextDecoder().decode(getOutput.stdout);
+
+      // Verify content matches
+      expect(retrievedContent).toBe(testContent);
+
+      // Cleanup
+      await deleteTestRecord(agent, result.rkey);
+    } finally {
+      await Deno.remove(filePath);
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
+});
+
+Deno.test({
+  name: "e2e - get command with --output saves to file",
+  async fn() {
+    const agent = await createAgent();
+    const testContent = "Content to save via --output flag";
+    const filePath = await createTestFile("test-get-output.txt", testContent);
+    const outputPath = await Deno.makeTempFile();
+
+    try {
+      const result = await uploadTestFile(agent, filePath);
+
+      // Test get command with --output
+      const getCommand = new Deno.Command("deno", {
+        args: [
+          "run",
+          "-A",
+          "./src/main.ts",
+          "get",
+          result.rkey,
+          "--service",
+          SERVICE,
+          "--handle",
+          HANDLE!,
+          "--app-password",
+          PASSWORD!,
+          "--output",
+          outputPath,
+        ],
+        stdout: "piped",
+        stderr: "piped",
+      });
+
+      const getOutput = await getCommand.output();
+      const stderrText = new TextDecoder().decode(getOutput.stderr);
+
+      // Verify success message
+      expect(stderrText).toContain("✓ Saved to:");
+      expect(stderrText).toContain(outputPath);
+
+      // Verify file was saved correctly
+      const savedContent = await Deno.readTextFile(outputPath);
+      expect(savedContent).toBe(testContent);
+
+      // Cleanup
+      await deleteTestRecord(agent, result.rkey);
+    } finally {
+      await Deno.remove(filePath);
+      try {
+        await Deno.remove(outputPath);
+      } catch {
+        // ignore if already removed
+      }
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
+});
+
+Deno.test({
+  name: "e2e - get command handles binary content",
+  async fn() {
+    const agent = await createAgent();
+
+    // Create a binary file with null bytes
+    const binaryData = new Uint8Array([
+      0x00,
+      0x01,
+      0x02,
+      0xFF,
+      0xFE,
+      0xFD,
+      0x00,
+      0x00,
+      0x48,
+      0x65,
+      0x6C,
+      0x6C,
+      0x6F, // "Hello" with nulls
+    ]);
+    const tempDir = await Deno.makeTempDir();
+    const binaryPath = join(tempDir, "test-binary.bin");
+    await Deno.writeFile(binaryPath, binaryData);
+
+    const outputPath = await Deno.makeTempFile();
+
+    try {
+      // Upload binary file
+      const did = agent.session?.did;
+      if (!did) throw new Error("No DID in session");
+
+      const uploadRes = await agent.uploadBlob(binaryData, {
+        encoding: "application/octet-stream",
+      });
+      const blob = uploadRes.data?.blob;
+      if (!blob) throw new Error("Upload failed");
+
+      const checksum = calculateChecksum(binaryData);
+
+      const recordData: NetAltqAqfile.Main = {
+        $type: COLLECTION,
+        blob: blob as unknown as NetAltqAqfile.Main["blob"],
+        checksum,
+        createdAt: new Date().toISOString(),
+        file: {
+          name: "test-binary.bin",
+          size: binaryData.length,
+          mimeType: "application/octet-stream",
+        },
+      };
+
+      const createRes = await agent.com.atproto.repo.createRecord({
+        repo: did,
+        collection: COLLECTION,
+        record: recordData,
+      });
+
+      const rkey = createRes.data.uri.split("/").pop() || "";
+
+      // Get with --output
+      const getCommand = new Deno.Command("deno", {
+        args: [
+          "run",
+          "-A",
+          "./src/main.ts",
+          "get",
+          rkey,
+          "--service",
+          SERVICE,
+          "--handle",
+          HANDLE!,
+          "--app-password",
+          PASSWORD!,
+          "--output",
+          outputPath,
+        ],
+        stdout: "piped",
+        stderr: "piped",
+      });
+
+      await getCommand.output();
+
+      // Verify binary data was saved correctly
+      const savedData = await Deno.readFile(outputPath);
+      expect(savedData).toEqual(binaryData);
+
+      // Cleanup
+      await deleteTestRecord(agent, rkey);
+    } finally {
+      await Deno.remove(binaryPath);
+      try {
+        await Deno.remove(outputPath);
+      } catch {
+        // ignore
       }
     }
   },

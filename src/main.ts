@@ -90,6 +90,36 @@ interface ListOptions {
 }
 
 /**
+ * Options for showing file record metadata
+ */
+interface ShowOptions {
+  /** The URL of the PDS service */
+  serviceUrl: string;
+  /** AT Protocol handle or DID for authentication */
+  handle: string;
+  /** App Password from https://bsky.app/settings/app-passwords */
+  password: string;
+  /** The record key (rkey) of the file to show */
+  rkey: string;
+}
+
+/**
+ * Options for retrieving file content
+ */
+interface GetOptions {
+  /** The URL of the PDS service */
+  serviceUrl: string;
+  /** AT Protocol handle or DID for authentication */
+  handle: string;
+  /** App Password from https://bsky.app/settings/app-passwords */
+  password: string;
+  /** The record key (rkey) of the file to retrieve */
+  rkey: string;
+  /** Optional output file path. If not provided, outputs to stdout */
+  outputPath?: string;
+}
+
+/**
  * Upload a file to AT Protocol PDS and create a record
  *
  * This function handles the complete upload workflow:
@@ -384,6 +414,251 @@ async function deleteRecord(options: DeleteOptions): Promise<void> {
 }
 
 /**
+ * Show detailed metadata for a file record
+ *
+ * Retrieves and displays comprehensive information about a file record including
+ * file metadata, checksum, creation time, and inspection links to external tools.
+ *
+ * @param options - Show configuration options including authentication and rkey
+ * @returns A promise that resolves when the metadata is displayed
+ * @throws {Error} If authentication fails or record is not found
+ *
+ * @example
+ * ```ts
+ * await showRecord({
+ *   serviceUrl: "https://bsky.social",
+ *   handle: "alice.bsky.social",
+ *   password: "app-password",
+ *   rkey: "3m35jjrc5b62d"
+ * });
+ * ```
+ */
+async function showRecord(options: ShowOptions): Promise<void> {
+  const { serviceUrl, handle, password, rkey } = options;
+
+  // Initialize agent
+  const agent = new AtpAgent({ service: serviceUrl });
+
+  // Login
+  await agent.login({ identifier: handle, password: password });
+
+  // Get DID
+  const did = agent.session?.did;
+  if (!did) {
+    throw new Error("Could not determine DID from session");
+  }
+
+  const collection = "net.altq.aqfile";
+
+  // Get the record
+  try {
+    const recordResponse = await agent.com.atproto.repo.getRecord({
+      repo: did,
+      collection,
+      rkey,
+    });
+
+    const record = recordResponse.data.value as NetAltqAqfile.Main;
+    const uri = recordResponse.data.uri;
+    const cid = recordResponse.data.cid;
+
+    // Display metadata
+    console.log(`\n📄 File Record: ${rkey}\n`);
+    console.log(`URI:          ${uri}`);
+    console.log(`CID:          ${cid}`);
+    console.log(`Created:      ${record.createdAt}`);
+
+    if (record.file) {
+      console.log(`\nFile Information:`);
+      console.log(`  Name:       ${record.file.name}`);
+      console.log(`  Size:       ${record.file.size} bytes`);
+      if (record.file.mimeType) {
+        console.log(`  MIME Type:  ${record.file.mimeType}`);
+      }
+      if (record.file.modifiedAt) {
+        console.log(`  Modified:   ${record.file.modifiedAt}`);
+      }
+    }
+
+    if (record.checksum) {
+      console.log(`\nChecksum:`);
+      console.log(`  Algorithm:  ${record.checksum.algo}`);
+      console.log(`  Hash:       ${record.checksum.hash}`);
+    }
+
+    if (record.attribution) {
+      console.log(`\nAttribution:  ${record.attribution}`);
+    }
+
+    // Extract blob CID
+    const blob = record.blob;
+    if (blob && typeof blob === "object" && "ref" in blob) {
+      const blobRef = blob.ref;
+      const blobCid =
+        typeof blobRef === "object" && blobRef && "$link" in blobRef
+          ? blobRef.$link
+          : blobRef;
+      console.log(`\nBlob CID:     ${blobCid}`);
+    }
+
+    // Show inspection links
+    console.log(`\n🔍 Inspect this record:`);
+    console.log(`   https://pdsls.dev/${uri}`);
+    console.log(
+      `   https://atproto-browser.vercel.app/${uri.replace("at://", "at/")}`,
+    );
+    console.log();
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("not found")) {
+      throw new Error(`Record not found: ${rkey}`);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Retrieve file content from a record
+ *
+ * Downloads the blob content associated with a file record and either outputs
+ * it to stdout or saves it to a file. In interactive mode, warns if attempting
+ * to output binary content to the terminal.
+ *
+ * @param options - Get configuration options including authentication, rkey, and output path
+ * @returns A promise that resolves when the content is retrieved
+ * @throws {Error} If authentication fails, record is not found, or download fails
+ *
+ * @example
+ * ```ts
+ * // Output to stdout
+ * await getRecord({
+ *   serviceUrl: "https://bsky.social",
+ *   handle: "alice.bsky.social",
+ *   password: "app-password",
+ *   rkey: "3m35jjrc5b62d"
+ * });
+ *
+ * // Save to file
+ * await getRecord({
+ *   serviceUrl: "https://bsky.social",
+ *   handle: "alice.bsky.social",
+ *   password: "app-password",
+ *   rkey: "3m35jjrc5b62d",
+ *   outputPath: "downloaded.txt"
+ * });
+ * ```
+ */
+async function getRecord(options: GetOptions): Promise<void> {
+  const { serviceUrl, handle, password, rkey, outputPath } = options;
+
+  // Initialize agent
+  const agent = new AtpAgent({ service: serviceUrl });
+
+  // Login
+  await agent.login({ identifier: handle, password: password });
+
+  // Get DID
+  const did = agent.session?.did;
+  if (!did) {
+    throw new Error("Could not determine DID from session");
+  }
+
+  const collection = "net.altq.aqfile";
+
+  // Get the record
+  let record: NetAltqAqfile.Main;
+  let blobCid: string;
+
+  try {
+    const recordResponse = await agent.com.atproto.repo.getRecord({
+      repo: did,
+      collection,
+      rkey,
+    });
+
+    record = recordResponse.data.value as NetAltqAqfile.Main;
+
+    // Extract blob CID
+    const blob = record.blob;
+    if (!blob || typeof blob !== "object" || !("ref" in blob)) {
+      throw new Error("No blob found in record");
+    }
+
+    const blobRef = blob.ref;
+    blobCid = typeof blobRef === "object" && blobRef && "$link" in blobRef
+      ? blobRef.$link as string
+      : blobRef as string;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("not found")) {
+      throw new Error(`Record not found: ${rkey}`);
+    }
+    throw error;
+  }
+
+  // Download the blob
+  const blobUrl =
+    `${serviceUrl}/xrpc/com.atproto.sync.getBlob?did=${did}&cid=${blobCid}`;
+  const response = await fetch(blobUrl);
+
+  if (!response.ok) {
+    throw new Error(`Failed to download blob: ${response.statusText}`);
+  }
+
+  const blobData = new Uint8Array(await response.arrayBuffer());
+
+  // Determine if content is binary
+  const isBinary = (data: Uint8Array): boolean => {
+    // Check first 8KB for null bytes or high proportion of non-text chars
+    const sample = data.slice(0, Math.min(8192, data.length));
+    let nonTextCount = 0;
+
+    for (let i = 0; i < sample.length; i++) {
+      const byte = sample[i];
+      // Null byte is definite binary
+      if (byte === 0) return true;
+      // Count non-printable, non-whitespace characters
+      if (byte < 32 && byte !== 9 && byte !== 10 && byte !== 13) {
+        nonTextCount++;
+      }
+    }
+
+    // If more than 30% non-text characters, consider it binary
+    return (nonTextCount / sample.length) > 0.3;
+  };
+
+  const isContentBinary = isBinary(blobData);
+  const mimeType = record.file?.mimeType || "application/octet-stream";
+  const fileName = record.file?.name || rkey;
+
+  // If outputPath is specified, save to file
+  if (outputPath) {
+    await Deno.writeFile(outputPath, blobData);
+    console.error(`✓ Saved to: ${outputPath} (${blobData.length} bytes)`);
+    return;
+  }
+
+  // If no output path and interactive, warn about binary content
+  const { isInteractive } = await import("./config.ts");
+
+  if (isInteractive() && isContentBinary) {
+    console.error(`\n⚠️  Warning: This file appears to be binary content`);
+    console.error(`   File: ${fileName}`);
+    console.error(`   MIME: ${mimeType}`);
+    console.error(`   Size: ${blobData.length} bytes\n`);
+    console.error(`   Binary output may corrupt your terminal.`);
+    console.error(`   Use --output <file> to save to a file instead.\n`);
+
+    const response = prompt("Continue anyway? (y/N):");
+    if (response?.toLowerCase() !== "y") {
+      console.error("Aborted.");
+      Deno.exit(1);
+    }
+  }
+
+  // Output to stdout
+  await Deno.stdout.write(blobData);
+}
+
+/**
  * Display help message showing all available commands and options
  *
  * Prints comprehensive usage information including commands, environment
@@ -397,6 +672,8 @@ Upload files to AT Protocol PDS
 Usage:
   aqfile upload <file>     Upload a file
   aqfile list              List all uploaded files
+  aqfile show <rkey>       Show detailed metadata for a file
+  aqfile get <rkey>        Retrieve file content (outputs to stdout)
   aqfile delete <rkey>     Delete a file record (and its blob)
   aqfile config            Show config file location
   aqfile config setup      Set up credentials interactively
@@ -410,6 +687,7 @@ Options:
   -s, --service <url>      PDS service URL (default: https://bsky.social)
   --handle <handle>        AT Protocol handle (e.g., alice.bsky.social) or DID
   --app-password <pass>    App Password (generate at https://bsky.app/settings/app-passwords)
+  --output <file>          Output file path (for get command)
 
 Environment variables:
   AQFILE_SERVICE           PDS service URL (default: https://bsky.social)
@@ -436,6 +714,9 @@ Examples:
   aqfile upload document.pdf
   aqfile upload image.png --service https://my-pds.example.com
   aqfile list
+  aqfile show 3jxyz123abc
+  aqfile get 3jxyz123abc --output downloaded.pdf
+  aqfile get 3jxyz123abc | less
   aqfile delete 3jxyz123abc
   aqfile config setup
   aqfile config clear
@@ -451,7 +732,7 @@ Examples:
 async function main() {
   const args = parseArgs(Deno.args, {
     boolean: ["help", "version"],
-    string: ["service", "handle", "app-password"],
+    string: ["service", "handle", "app-password", "output"],
     alias: {
       h: "help",
       v: "version",
@@ -696,6 +977,91 @@ async function main() {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error(`\n✗ Delete failed: ${message}`);
+      if (Deno.env.get("DEBUG")) {
+        console.error(error);
+      }
+      Deno.exit(1);
+    }
+  } else if (command === "show") {
+    const rkey = args._[1]?.toString();
+    if (!rkey) {
+      console.error("Error: No record key specified");
+      console.error("Usage: aqfile show <rkey>");
+      console.error("Hint: Use 'aqfile list' to see available records");
+      Deno.exit(1);
+    }
+
+    // Load configuration
+    const config = await loadConfig({
+      service: args.service,
+      handle: args.handle,
+      password: args["app-password"],
+    });
+
+    if (!config.handle || !config.password) {
+      console.error(
+        "Error: Credentials not provided. Set AQFILE_HANDLE and AQFILE_APP_PASSWORD environment variables,",
+      );
+      console.error(`       or create a config file at: ${getConfigPath()}`);
+      console.error(
+        `       or run 'aqfile config setup' to configure interactively.`,
+      );
+      Deno.exit(1);
+    }
+
+    try {
+      await showRecord({
+        serviceUrl: config.service!,
+        handle: config.handle,
+        password: config.password,
+        rkey,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`✗ Show failed: ${message}`);
+      if (Deno.env.get("DEBUG")) {
+        console.error(error);
+      }
+      Deno.exit(1);
+    }
+  } else if (command === "get") {
+    const rkey = args._[1]?.toString();
+    if (!rkey) {
+      console.error("Error: No record key specified");
+      console.error("Usage: aqfile get <rkey> [--output <file>]");
+      console.error("Hint: Use 'aqfile list' to see available records");
+      Deno.exit(1);
+    }
+
+    // Load configuration
+    const config = await loadConfig({
+      service: args.service,
+      handle: args.handle,
+      password: args["app-password"],
+    });
+
+    if (!config.handle || !config.password) {
+      console.error(
+        "Error: Credentials not provided. Set AQFILE_HANDLE and AQFILE_APP_PASSWORD environment variables,",
+      );
+      console.error(`       or create a config file at: ${getConfigPath()}`);
+      console.error(
+        `       or run 'aqfile config setup' to configure interactively.`,
+      );
+      Deno.exit(1);
+    }
+
+    try {
+      await getRecord({
+        serviceUrl: config.service!,
+        handle: config.handle,
+        password: config.password,
+        rkey,
+        outputPath: args.output,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`✗ Get failed: ${message}`);
       if (Deno.env.get("DEBUG")) {
         console.error(error);
       }
