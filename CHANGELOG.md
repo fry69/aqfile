@@ -21,3 +21,6 @@
 - add end-to-end testing
 - improve error messages with blob structure debugging
 - add lexicon pubish script
+- fix config path on windows
+- add JSDoc comments
+- cleanup README

@@ -63,6 +63,9 @@ to find the rkey.
 
 ### Configuration
 
+> **⚠️ Security Note**: Always use an **App Password**, never your account
+> password! Generate one at: https://bsky.app/settings/app-passwords
+
 #### Environment Variables
 
 ```bash
@@ -93,7 +96,7 @@ Create a config file at:
 aqfile upload file.txt \
   --service https://my-pds.example.com \
   --identifier alice.example.com \
-  --password my-password
+  --password your-app-password
 ```
 
 ## Commands
@@ -101,12 +104,6 @@ aqfile upload file.txt \
 ### `aqfile upload <file>`
 
 Upload a file to your PDS.
-
-**Options:**
-
-- `--service, -s`: PDS service URL
-- `--identifier, -i`: AT Protocol handle or DID
-- `--password, -p`: AT Protocol password
 
 **Examples:**
 
@@ -118,18 +115,12 @@ aqfile upload photo.jpg
 aqfile upload video.mp4 --service https://my-pds.example.com
 
 # Upload with inline credentials
-aqfile upload data.json -i alice.example.com -p my-password
+aqfile upload data.json -i alice.example.com -p your-app-password
 ```
 
 ### `aqfile list`
 
 List all uploaded files.
-
-**Options:**
-
-- `--service, -s`: PDS service URL
-- `--identifier, -i`: AT Protocol handle or DID
-- `--password, -p`: AT Protocol password
 
 **Output Format:**
 
@@ -145,12 +136,6 @@ Delete a file record and its blob.
 **Arguments:**
 
 - `<rkey>`: Record key from `aqfile list`
-
-**Options:**
-
-- `--service, -s`: PDS service URL
-- `--identifier, -i`: AT Protocol handle or DID
-- `--password, -p`: AT Protocol password
 
 **Note:** The blob will be garbage collected by the PDS when no other records
 reference it.
@@ -230,6 +215,7 @@ deno task lex
 
 ```bash
 # Create .env.e2e with test credentials
+# IMPORTANT: Use App Password from https://bsky.app/settings/app-passwords
 echo 'AQFILE_SERVICE=https://altq.net' > .env.e2e
 echo 'AQFILE_USERNAME=test.altq.net' >> .env.e2e
 echo 'AQFILE_PASSWORD=your-app-password' >> .env.e2e
@@ -280,6 +266,4 @@ Contributions welcome! Please:
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/fry69/aqfile/issues)
-- **Discussions**:
-  [GitHub Discussions](https://github.com/fry69/aqfile/discussions)
 - **AT Protocol**: [atproto.com/docs](https://atproto.com/docs)
