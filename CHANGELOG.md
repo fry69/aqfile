@@ -7,6 +7,7 @@
 - add attribution to ATFile
 - add release script
 - complete release script
+- add dry-run option to release script
 
 ### v0.1.2
 

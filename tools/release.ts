@@ -24,13 +24,19 @@ const DENO_JSON = join(ROOT_DIR, "deno.json");
 
 function showHelp() {
   console.log(`
-${bold("Usage:")} deno run -A tools/release.ts <version|major|minor|patch>
+${
+    bold("Usage:")
+  } deno run -A tools/release.ts [--dry-run] <version|major|minor|patch>
+
+${bold("Options:")}
+  --dry-run                               Stop before pushing to GitHub
 
 ${bold("Examples:")}
   deno run -A tools/release.ts 0.3.0      # Set specific version
   deno run -A tools/release.ts patch      # Bump patch version (0.2.4 -> 0.2.5)
   deno run -A tools/release.ts minor      # Bump minor version (0.2.4 -> 0.3.0)
   deno run -A tools/release.ts major      # Bump major version (0.2.4 -> 1.0.0)
+  deno run -A tools/release.ts --dry-run patch  # Test without pushing
 `);
 }
 
@@ -41,10 +47,21 @@ function exitError(msg: string): never {
 }
 
 // Parse command line arguments
-if (Deno.args.length === 0) {
+let dryRun = false;
+let versionArg = "";
+
+for (const arg of Deno.args) {
+  if (arg === "--dry-run") {
+    dryRun = true;
+  } else if (!versionArg) {
+    versionArg = arg;
+  } else {
+    exitError("Too many arguments.");
+  }
+}
+
+if (!versionArg) {
   exitError("Missing version argument.");
-} else if (Deno.args.length > 1) {
-  exitError("Too many arguments. Expected only one version argument.");
 }
 
 // Read current version from deno.json
@@ -57,7 +74,6 @@ if (!currentVersion) {
 }
 
 const current = semver.parse(currentVersion);
-const versionArg = Deno.args[0];
 let next: semver.SemVer;
 
 // Determine next version
@@ -109,8 +125,8 @@ console.log();
 console.log(`${bold("Updating")} src/main.ts...`);
 const versionFileContent = await Deno.readTextFile(VERSION_FILE);
 const updatedVersionFile = versionFileContent.replace(
-  /export const VERSION = "[^"]+";/,
-  `export const VERSION = "${nextVersion}";`,
+  /(?:export )?const VERSION = "[^"]+";/,
+  (match) => match.replace(/"[^"]+"/, `"${nextVersion}"`),
 );
 
 if (versionFileContent === updatedVersionFile) {
@@ -204,6 +220,32 @@ if (!tagResult.success) {
   Deno.exit(1);
 }
 console.log(green("✓") + " Tag created");
+
+// Check if dry-run
+if (dryRun) {
+  console.log();
+  console.log(yellow(bold("🏃 Dry-run mode - stopping before push")));
+  console.log();
+  console.log(bold("To revert these changes, run:"));
+  console.log();
+  console.log(yellow(`  git reset --hard HEAD~1`));
+  console.log(yellow(`  git tag --delete v${nextVersion}`));
+  console.log();
+  console.log(bold("To complete the release, run:"));
+  console.log();
+  console.log(yellow(`  git push && git push --tags`));
+  console.log();
+  console.log(
+    `  View on GitHub: ${
+      yellow(`https://github.com/fry69/aqfile/releases/tag/v${nextVersion}`)
+    }`,
+  );
+  console.log(
+    `  View on JSR: ${yellow(`https://jsr.io/@fry69/aqfile@${nextVersion}`)}`,
+  );
+  console.log();
+  Deno.exit(0);
+}
 
 // Git push
 console.log();
