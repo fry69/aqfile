@@ -31,7 +31,6 @@
     "include": [
       "deno.json",
       "src/",
-      "lexicons/",
       "LICENSE",
       "README.md",
       "CHANGELOG.md"
