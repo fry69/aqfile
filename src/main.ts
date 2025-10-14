@@ -1,77 +1,101 @@
-// atfile-poc.ts
-// PoC: upload a file to an AT Protocol PDS and create a repo record referencing it.
+/**
+ * ATfile - Upload files to AT Protocol PDS
+ * Reimplementation in modern TypeScript using Deno runtime
+ */
 
-import fs from "node:fs";
-import path from "node:path";
-import process from "node:process";
-import mime from "mime-types";
+import { basename } from "@std/path";
+import { parseArgs } from "@std/cli";
+import { lookup } from "mime-types";
 import { AtpAgent } from "@atproto/api";
+import { getConfigPath, loadConfig } from "./config.ts";
+import {
+  calculateChecksum,
+  generateFingerprint,
+  getFileMetadata,
+} from "./utils.ts";
 
-async function uploadAndCreateRecord(
-  serviceUrl: string,
-  identifier: string,
-  password: string,
-  filePath: string,
-) {
-  // 1) init agent
+const VERSION = "0.1.0";
+
+interface UploadOptions {
+  serviceUrl: string;
+  identifier: string;
+  password: string;
+  filePath: string;
+}
+
+interface UploadResult {
+  blob: unknown;
+  record: {
+    uri: string;
+    cid: string;
+  };
+}
+
+/**
+ * Upload a file to AT Protocol PDS and create a record
+ */
+async function uploadFile(options: UploadOptions): Promise<UploadResult> {
+  const { serviceUrl, identifier, password, filePath } = options;
+
+  // Initialize agent
   const agent = new AtpAgent({ service: serviceUrl });
 
-  // 2) login (you can also use app-passwords / sessions instead)
-  await agent.login({
-    identifier,
-    password,
-  });
-  console.log("Logged in."); // agent now authenticated
+  // Login
+  await agent.login({ identifier, password });
+  console.log(`✓ Logged in as ${identifier}`);
 
-  // 3) read file and detect mime type
-  const data = fs.readFileSync(filePath);
-  const mimeType = mime.lookup(filePath) || "application/octet-stream";
-  const fileName = path.basename(filePath);
-  const size = fs.statSync(filePath).size;
+  // Read file
+  const data = await Deno.readFile(filePath);
+  const fileName = basename(filePath);
+  const mimeType = lookup(filePath) || "application/octet-stream";
 
-  // 4) upload blob
-  // `agent.uploadBlob` is the recommended nicety; it wraps the com.atproto.repo.uploadBlob call.
-  // It returns an object containing `data.blob` with the blob ref (CID) and metadata.
-  console.log(`Uploading ${fileName} (${size} bytes, ${mimeType})...`);
+  // Upload blob
+  console.log(`⬆ Uploading ${fileName} (${data.length} bytes, ${mimeType})...`);
   const uploadRes = await agent.uploadBlob(data, { encoding: mimeType });
   const blob = uploadRes.data?.blob;
-  if (!blob) throw new Error("uploadBlob returned no blob.");
-  console.log("Uploaded blob:", blob.ref?.["$link"] ?? "(no link in response)");
 
-  // 5) create a record that references the blob, anchoring it.
-  // Replace `collection` and `record` with the exact lexicon you want.
-  // Example below uses a hypothetical collection name and record structure.
-  // For ATFile, replace `collection` and `record` fields with the exact `blue.zio.atfile` schema fields.
-  const did = agent.session?.did ?? (agent as any).did; // best-effort DID extraction
-  if (!did) throw new Error("Could not determine repo DID from agent session.");
+  if (!blob) {
+    throw new Error("Upload failed: no blob returned");
+  }
 
-  // === IMPORTANT: adapt the shape below to match the blue.zio.atfile lexicon ===
-  // Example record uses:
-  //  - $type set to the lexicon NSID,
-  //  - file metadata fields, and
-  //  - the blob reference (a blob object).
-  const collection = "blue.zio.atfile.file"; // <-- change to the real collection NSID if different
-  const recordBody = {
-    $type: "blue.zio.atfile.file", // <-- change to the lexicon main type if different
-    filename: fileName,
-    size,
-    mimeType,
-    // include the blob reference object the PDS returned (this is the standard pattern)
-    blob: blob,
+  const blobCid = blob.ref?.["$link"] ?? blob.ref;
+  console.log(`✓ Blob uploaded: ${blobCid}`);
+
+  // Calculate checksum
+  const checksum = calculateChecksum(data);
+
+  // Get file metadata
+  const fileMetadata = await getFileMetadata(filePath, fileName, mimeType);
+
+  // Generate fingerprint
+  const fingerprint = generateFingerprint(VERSION);
+
+  // Get DID
+  const did = agent.session?.did;
+  if (!did) {
+    throw new Error("Could not determine DID from session");
+  }
+
+  // Create record according to blue.zio.atfile.upload lexicon
+  const collection = "blue.zio.atfile.upload";
+  const record: Record<string, unknown> = {
+    $type: collection,
+    blob,
+    checksum,
     createdAt: new Date().toISOString(),
-    // any other fields required by the lexicon...
+    file: fileMetadata,
+    finger: fingerprint,
   };
 
-  console.log("Creating repo record in", collection, "...");
+  console.log(`📝 Creating record in ${collection}...`);
   const createRes = await agent.com.atproto.repo.createRecord({
-    did,
+    repo: did,
     collection,
-    record: recordBody,
+    record,
   });
 
-  console.log("Created record:", createRes.data);
-  console.log("Record URI:", createRes.data?.uri);
-  console.log("Record CID:", createRes.data?.cid);
+  console.log(`✓ Record created: ${createRes.data.uri}`);
+  console.log(`  CID: ${createRes.data.cid}`);
 
   return {
     blob,
@@ -79,31 +103,156 @@ async function uploadAndCreateRecord(
   };
 }
 
-// CLI runner
-if (require.main === module) {
-  (async () => {
-    const [, , maybeFile] = process.argv;
-    if (!maybeFile) {
-      console.error("Usage: node atfile-poc.js /path/to/file");
-      process.exit(2);
+/**
+ * Display help message
+ */
+function showHelp(): void {
+  console.log(`
+ATfile-ts v${VERSION}
+Upload files to AT Protocol PDS
+
+Usage:
+  atfile upload <file>     Upload a file
+  atfile config            Show config file location
+  atfile help              Show this help
+  atfile version           Show version
+
+Environment variables:
+  ATFILE_SERVICE           PDS service URL (default: https://bsky.social)
+  ATFILE_USERNAME          AT Protocol identifier (handle or DID)
+  ATFILE_PASSWORD          AT Protocol password or app password
+
+Config file:
+  Configuration can be stored in a JSON file at:
+  - Linux/Unix: ~/.config/atfile/config.json
+  - macOS: ~/Library/Application Support/atfile/config.json
+  - Windows: %APPDATA%\\atfile\\config.json
+
+  Example config.json:
+  {
+    "service": "https://bsky.social",
+    "identifier": "alice.bsky.social",
+    "password": "your-app-password"
+  }
+
+Examples:
+  atfile upload document.pdf
+  atfile upload image.png --service https://my-pds.example.com
+`);
+}
+
+/**
+ * Main CLI entry point
+ */
+async function main() {
+  const args = parseArgs(Deno.args, {
+    boolean: ["help", "version"],
+    string: ["service", "identifier", "password"],
+    alias: {
+      h: "help",
+      v: "version",
+      s: "service",
+      i: "identifier",
+      p: "password",
+    },
+  });
+
+  // Handle help
+  if (args.help || args._.length === 0) {
+    showHelp();
+    Deno.exit(0);
+  }
+
+  // Handle version
+  if (args.version) {
+    console.log(`atfile-ts v${VERSION}`);
+    Deno.exit(0);
+  }
+
+  const command = args._[0]?.toString();
+
+  if (command === "help") {
+    showHelp();
+    Deno.exit(0);
+  }
+
+  if (command === "version") {
+    console.log(`atfile-ts v${VERSION}`);
+    Deno.exit(0);
+  }
+
+  if (command === "config") {
+    const configPath = getConfigPath();
+    console.log(`Config file location: ${configPath}`);
+
+    try {
+      const config = await loadConfig();
+      console.log("\nCurrent configuration:");
+      console.log(`  Service:    ${config.service || "(not set)"}`);
+      console.log(`  Identifier: ${config.identifier || "(not set)"}`);
+      console.log(`  Password:   ${config.password ? "***" : "(not set)"}`);
+    } catch {
+      console.log("\nNo configuration found");
     }
-    const filePath = maybeFile;
-    const SERVICE = process.env.SERVICE || "https://bsky.social";
-    const IDENTIFIER = process.env.IDENTIFIER || process.env.ATFILE_USERNAME;
-    const PASSWORD = process.env.PASSWORD || process.env.ATFILE_PASSWORD;
-    if (!IDENTIFIER || !PASSWORD) {
+
+    Deno.exit(0);
+  }
+
+  if (command === "upload") {
+    const filePath = args._[1]?.toString();
+    if (!filePath) {
+      console.error("Error: No file specified");
+      console.error("Usage: atfile upload <file>");
+      Deno.exit(1);
+    }
+
+    // Check if file exists
+    try {
+      await Deno.stat(filePath);
+    } catch {
+      console.error(`Error: File not found: ${filePath}`);
+      Deno.exit(1);
+    }
+
+    // Load configuration from all sources (file, env, CLI args)
+    const config = await loadConfig({
+      service: args.service,
+      identifier: args.identifier,
+      password: args.password,
+    });
+
+    if (!config.identifier || !config.password) {
       console.error(
-        "Set IDENTIFIER and PASSWORD env vars (or ATFILE_USERNAME / ATFILE_PASSWORD).",
+        "Error: Credentials not provided. Set ATFILE_USERNAME and ATFILE_PASSWORD environment variables,",
       );
-      process.exit(2);
+      console.error(`       or create a config file at: ${getConfigPath()}`);
+      Deno.exit(1);
     }
 
     try {
-      await uploadAndCreateRecord(SERVICE, IDENTIFIER, PASSWORD, filePath);
-      console.log("Done.");
-    } catch (err) {
-      console.error("Error:", err);
-      process.exit(1);
+      await uploadFile({
+        serviceUrl: config.service!,
+        identifier: config.identifier,
+        password: config.password,
+        filePath,
+      });
+      console.log("\n✓ Upload complete");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`\n✗ Upload failed: ${message}`);
+      if (Deno.env.get("DEBUG")) {
+        console.error(error);
+      }
+      Deno.exit(1);
     }
-  })();
+  } else {
+    console.error(`Error: Unknown command: ${command}`);
+    console.error("Run 'atfile help' for usage information");
+    Deno.exit(1);
+  }
+}
+
+// Run if main module
+if (import.meta.main) {
+  main();
 }
