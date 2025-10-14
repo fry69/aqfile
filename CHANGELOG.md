@@ -1,3 +1,9 @@
+### v0.1.3
+
+- mention interactive setup in README
+- show helpful pdsls.dev and atproto-browser links
+
+
 ### v0.1.2
 
 - add badges

@@ -69,6 +69,21 @@ to find the rkey.
 > **⚠️ Security Note**: Always use an **App Password**, never your account
 > password! Generate one at: https://bsky.app/settings/app-passwords
 
+#### Interactive Setup (Recommended)
+
+The easiest way to configure `aqfile` is through the interactive setup:
+
+```bash
+aqfile config setup
+```
+
+This will prompt you for your service URL, handle, and app password, then save
+the configuration for future use. You can also clear stored credentials with:
+
+```bash
+aqfile config clear
+```
+
 #### Environment Variables
 
 ```bash
