@@ -24,14 +24,14 @@
   },
   "lint": {
     "exclude": [
-      "src/lexicons/*"
+      "src/lexicons/"
     ]
   },
   "publish": {
     "include": [
       "deno.json",
-      "src/*",
-      "lexicons/*",
+      "src/",
+      "lexicons/",
       "LICENSE",
       "README.md",
       "CHANGELOG.md"
