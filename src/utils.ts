@@ -3,20 +3,11 @@
  */
 
 import * as crypto from "node:crypto";
+import type { NetAltqAqfile } from "./lexicons/index.ts";
 
-export interface FileChecksum {
-  $type: "net.altq.aqfile#checksum";
-  algo?: string;
-  hash?: string;
-}
-
-export interface FileMetadata {
-  $type: "net.altq.aqfile#file";
-  name?: string;
-  size?: number;
-  mimeType?: string;
-  modifiedAt?: string;
-}
+// Use generated types from lexicon schemas instead of manually defining them
+export type FileChecksum = NetAltqAqfile.Checksum;
+export type FileMetadata = NetAltqAqfile.File;
 
 /**
  * Calculate checksums for a file

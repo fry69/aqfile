@@ -12,3 +12,8 @@
 - added comprehensive test suite
 - rebranded as aqfile from atfile
 - simplified net.altq.aqfile lexicon
+- fixed collection name
+- integrated generated lexicon schemas
+- added runtime validation
+- added validation documentation and examples
+

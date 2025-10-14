@@ -6,10 +6,11 @@ Deno.test("utils - calculateChecksum generates correct SHA256 hash", () => {
   const testData = new TextEncoder().encode("Hello, Aqfile!");
   const checksum = calculateChecksum(testData, "sha256");
 
+  // The $type field is optional in the generated schema
   expect(checksum.$type).toBe("net.altq.aqfile#checksum");
   expect(checksum.algo).toBe("sha256");
   expect(checksum.hash).toBeTruthy();
-  expect(checksum.hash?.length).toBe(64); // SHA256 produces 64 hex characters
+  expect(checksum.hash.length).toBe(64); // SHA256 produces 64 hex characters
 });
 
 Deno.test("utils - calculateChecksum generates correct MD5 hash", () => {
@@ -19,7 +20,7 @@ Deno.test("utils - calculateChecksum generates correct MD5 hash", () => {
   expect(checksum.$type).toBe("net.altq.aqfile#checksum");
   expect(checksum.algo).toBe("md5");
   expect(checksum.hash).toBeTruthy();
-  expect(checksum.hash?.length).toBe(32); // MD5 produces 32 hex characters
+  expect(checksum.hash.length).toBe(32); // MD5 produces 32 hex characters
 });
 
 Deno.test("utils - calculateChecksum defaults to SHA256", () => {
@@ -27,7 +28,7 @@ Deno.test("utils - calculateChecksum defaults to SHA256", () => {
   const checksum = calculateChecksum(testData);
 
   expect(checksum.algo).toBe("sha256");
-  expect(checksum.hash?.length).toBe(64);
+  expect(checksum.hash.length).toBe(64);
 });
 
 Deno.test("utils - calculateChecksum is deterministic", () => {
@@ -47,6 +48,7 @@ Deno.test("utils - getFileMetadata returns correct info", async () => {
 
   const metadata = await getFileMetadata(testFile, "test.txt", "text/plain");
 
+  // The $type field is optional in the generated schema
   expect(metadata.$type).toBe("net.altq.aqfile#file");
   expect(metadata.name).toBe("test.txt");
   expect(metadata.size).toBe(testContent.length);
@@ -54,9 +56,11 @@ Deno.test("utils - getFileMetadata returns correct info", async () => {
   expect(metadata.modifiedAt).toBeTruthy();
 
   // Verify ISO datetime format
-  const date = new Date(metadata.modifiedAt!);
-  expect(date).toBeInstanceOf(Date);
-  expect(isNaN(date.getTime())).toBe(false);
+  if (metadata.modifiedAt) {
+    const date = new Date(metadata.modifiedAt);
+    expect(date).toBeInstanceOf(Date);
+    expect(isNaN(date.getTime())).toBe(false);
+  }
 
   // Clean up
   await Deno.remove(tempDir, { recursive: true });

@@ -7,8 +7,11 @@ import { basename } from "@std/path";
 import { parseArgs } from "@std/cli";
 import { lookup } from "mime-types";
 import { AtpAgent } from "@atproto/api";
+import { safeParse } from "@atcute/lexicons";
 import { getConfigPath, loadConfig } from "./config.ts";
 import { calculateChecksum, getFileMetadata } from "./utils.ts";
+import type { NetAltqAqfile } from "./lexicons/index.ts";
+import { NetAltqAqfile as AqfileSchema } from "./lexicons/index.ts";
 
 const VERSION = "0.1.0";
 
@@ -69,21 +72,34 @@ async function uploadFile(options: UploadOptions): Promise<UploadResult> {
     throw new Error("Could not determine DID from session");
   }
 
-  // Create record according to net.altq.aqfile.upload lexicon
-  const collection = "net.altq.aqfile.upload";
-  const record: Record<string, unknown> = {
-    $type: collection,
-    blob,
+  // Create record according to net.altq.aqfile lexicon (corrected collection name)
+  const collection = "net.altq.aqfile";
+
+  // Build the record with proper typing
+  // The blob from uploadBlob is a BlobRef from @atproto/api, which is compatible
+  // with the lexicon Blob type at runtime (both have ref, mimeType, size)
+  const recordData: NetAltqAqfile.Main = {
+    $type: "net.altq.aqfile",
+    blob: blob as unknown as NetAltqAqfile.Main["blob"],
     checksum,
     createdAt: new Date().toISOString(),
     file: fileMetadata,
   };
 
+  // Validate the record before creating it using the generated schema
+  const validationResult = safeParse(AqfileSchema.mainSchema, recordData);
+  if (!validationResult.ok) {
+    const errorDetails = validationResult.issues
+      ? JSON.stringify(validationResult.issues, null, 2)
+      : validationResult.message;
+    throw new Error(`Record validation failed: ${errorDetails}`);
+  }
+
   console.log(`📝 Creating record in ${collection}...`);
   const createRes = await agent.com.atproto.repo.createRecord({
     repo: did,
     collection,
-    record,
+    record: validationResult.value,
   });
 
   console.log(`✓ Record created: ${createRes.data.uri}`);
