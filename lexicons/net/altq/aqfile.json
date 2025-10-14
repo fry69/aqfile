@@ -1,7 +1,7 @@
 {
   "lexicon": 1,
   "id": "net.altq.aqfile",
-  "$type": "com.atproto.lexicon.schema",
+  "description": "A record for uploading and tracking binary blob files with metadata.",
   "defs": {
     "checksum": {
       "type": "object",
@@ -9,11 +9,14 @@
       "properties": {
         "algo": {
           "type": "string",
-          "description": "Name of the algorithm, e.g. 'sha256'"
+          "description": "Hash algorithm name.",
+          "maxLength": 32,
+          "knownValues": ["sha256", "sha512", "blake3"]
         },
         "hash": {
           "type": "string",
-          "description": "Hex/base64 encoded digest produced by the algorithm"
+          "description": "Hex or base64 encoded digest produced by the algorithm.",
+          "maxLength": 128
         }
       },
       "required": ["algo", "hash"]
@@ -23,16 +26,26 @@
       "type": "object",
       "description": "File metadata describing the uploaded blob.",
       "properties": {
-        "name": { "type": "string", "description": "User-visible filename" },
-        "size": { "type": "integer", "description": "File size in bytes" },
+        "name": {
+          "type": "string",
+          "description": "User-visible filename.",
+          "maxLength": 512
+        },
+        "size": {
+          "type": "integer",
+          "description": "File size in bytes.",
+          "minimum": 0,
+          "maximum": 1000000000
+        },
         "mimeType": {
           "type": "string",
-          "description": "MIME type, e.g. 'video/mp4'"
+          "description": "MIME type, e.g. 'video/mp4'.",
+          "maxLength": 255
         },
         "modifiedAt": {
           "type": "string",
           "format": "datetime",
-          "description": "Client-side last-modified timestamp"
+          "description": "Client-side last-modified timestamp."
         }
       },
       "required": ["name", "size"]
@@ -40,7 +53,7 @@
 
     "main": {
       "type": "record",
-      "description": "Canonical record describing an uploaded blob + metadata.",
+      "description": "A record representing an uploaded file blob with metadata.",
       "key": "any",
       "record": {
         "type": "object",
@@ -49,28 +62,31 @@
             "type": "blob",
             "accept": ["*/*"],
             "maxSize": 1000000000,
-            "description": "Blob reference. 'accept' is an array of allowed MIME patterns. 'maxSize' is advisory."
+            "description": "The uploaded blob reference. Note: Individual PDS instances may enforce lower size limits."
           },
 
           "createdAt": {
             "type": "string",
             "format": "datetime",
-            "description": "ISO 8601 timestamp when the upload was created."
+            "description": "Timestamp when this record was created."
           },
 
           "attribution": {
             "type": "string",
-            "description": "Optional DID or identifier for attribution."
+            "format": "at-identifier",
+            "description": "Handle or DID of the account to attribute this upload to."
           },
 
           "file": {
             "type": "ref",
-            "ref": "net.altq.aqfile#file"
+            "ref": "#file",
+            "description": "Metadata about the file."
           },
 
           "checksum": {
             "type": "ref",
-            "ref": "net.altq.aqfile#checksum"
+            "ref": "#checksum",
+            "description": "Optional cryptographic checksum for integrity verification."
           }
         },
         "required": ["blob", "createdAt", "file"]
