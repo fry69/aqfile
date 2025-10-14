@@ -19,14 +19,22 @@
     "@atproto/api": "npm:@atproto/api@^0.17.2",
     "@std/cli": "jsr:@std/cli@^1.0.23",
     "@std/expect": "jsr:@std/expect@^1.0.17",
-    "@std/fmt": "jsr:@std/fmt@^1.0.5",
     "@std/path": "jsr:@std/path@^1.0.8",
-    "@std/semver": "jsr:@std/semver@^1.0.3",
     "mime-types": "npm:mime-types@^3.0.1"
   },
   "lint": {
     "exclude": [
       "src/lexicons/*"
+    ]
+  },
+  "publish": {
+    "include": [
+      "deno.json",
+      "src/*",
+      "lexicons/*",
+      "LICENSE",
+      "README.md",
+      "CHANGELOG.md"
     ]
   }
 }

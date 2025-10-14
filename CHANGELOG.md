@@ -24,3 +24,5 @@
 - fix config path on windows
 - add JSDoc comments
 - cleanup README
+- remove unused dependencies
+- prepare for publishing on jsr.io
