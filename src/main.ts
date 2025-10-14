@@ -30,7 +30,7 @@ import { calculateChecksum, getFileMetadata } from "./utils.ts";
 import type { NetAltqAqfile } from "./types.ts";
 
 /** The current version of aqfile */
-const VERSION = "0.1.1";
+const VERSION = "0.1.2";
 
 /**
  * Options for uploading a file to the PDS
