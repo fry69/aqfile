@@ -1,0 +1,80 @@
+{
+  "lexicon": 1,
+  "id": "net.altq.aqfile",
+  "$type": "com.atproto.lexicon.schema",
+  "defs": {
+    "checksum": {
+      "type": "object",
+      "description": "Cryptographic checksum for integrity verification.",
+      "properties": {
+        "algo": {
+          "type": "string",
+          "description": "Name of the algorithm, e.g. 'sha256'"
+        },
+        "hash": {
+          "type": "string",
+          "description": "Hex/base64 encoded digest produced by the algorithm"
+        }
+      },
+      "required": ["algo", "hash"]
+    },
+
+    "file": {
+      "type": "object",
+      "description": "File metadata describing the uploaded blob.",
+      "properties": {
+        "name": { "type": "string", "description": "User-visible filename" },
+        "size": { "type": "integer", "description": "File size in bytes" },
+        "mimeType": {
+          "type": "string",
+          "description": "MIME type, e.g. 'video/mp4'"
+        },
+        "modifiedAt": {
+          "type": "string",
+          "format": "datetime",
+          "description": "Client-side last-modified timestamp"
+        }
+      },
+      "required": ["name", "size"]
+    },
+
+    "main": {
+      "type": "record",
+      "description": "Canonical record describing an uploaded blob + metadata.",
+      "key": "any",
+      "record": {
+        "type": "object",
+        "properties": {
+          "blob": {
+            "type": "blob",
+            "accept": ["*/*"],
+            "maxSize": 1000000000,
+            "description": "Blob reference. 'accept' is an array of allowed MIME patterns. 'maxSize' is advisory."
+          },
+
+          "createdAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "ISO 8601 timestamp when the upload was created."
+          },
+
+          "attribution": {
+            "type": "string",
+            "description": "Optional DID or identifier for attribution."
+          },
+
+          "file": {
+            "type": "ref",
+            "ref": "net.altq.aqfile#file"
+          },
+
+          "checksum": {
+            "type": "ref",
+            "ref": "net.altq.aqfile#checksum"
+          }
+        },
+        "required": ["blob", "createdAt", "file"]
+      }
+    }
+  }
+}

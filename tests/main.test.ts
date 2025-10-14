@@ -4,7 +4,7 @@ Deno.test("config - getConfigPath returns correct path based on OS", async () =>
   const { getConfigPath } = await import("../src/config.ts");
   const configPath = getConfigPath();
 
-  expect(configPath).toContain("atfile");
+  expect(configPath).toContain("aqfile");
   expect(configPath).toContain("config.json");
 
   if (Deno.build.os === "darwin") {
@@ -32,9 +32,9 @@ Deno.test("config - loadEnvConfig reads environment variables", async () => {
   const { loadEnvConfig } = await import("../src/config.ts");
 
   // Set test env vars
-  Deno.env.set("ATFILE_SERVICE", "https://test.example.com");
-  Deno.env.set("ATFILE_USERNAME", "testuser");
-  Deno.env.set("ATFILE_PASSWORD", "testpass");
+  Deno.env.set("AQFILE_SERVICE", "https://test.example.com");
+  Deno.env.set("AQFILE_USERNAME", "testuser");
+  Deno.env.set("AQFILE_PASSWORD", "testpass");
 
   const config = loadEnvConfig();
 
@@ -43,9 +43,9 @@ Deno.test("config - loadEnvConfig reads environment variables", async () => {
   expect(config.password).toBe("testpass");
 
   // Clean up
-  Deno.env.delete("ATFILE_SERVICE");
-  Deno.env.delete("ATFILE_USERNAME");
-  Deno.env.delete("ATFILE_PASSWORD");
+  Deno.env.delete("AQFILE_SERVICE");
+  Deno.env.delete("AQFILE_USERNAME");
+  Deno.env.delete("AQFILE_PASSWORD");
 });
 
 Deno.test("config - loadConfig includes defaults", async () => {

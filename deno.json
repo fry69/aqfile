@@ -1,5 +1,5 @@
 {
-  "name": "@fry69/atfile-ts",
+  "name": "@fry69/aqfile",
   "version": "0.1.0",
   "exports": {
     ".": "./src/main.ts"

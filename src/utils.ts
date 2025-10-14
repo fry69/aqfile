@@ -1,53 +1,21 @@
 /**
- * Utility functions for ATfile
+ * Utility functions for Aqfile
  */
 
 import * as crypto from "node:crypto";
 
-export interface MachineFingerprint {
-  $type: "blue.zio.atfile.finger#machine";
-  app?: string;
-  host?: string;
-  id?: string;
-  os?: string;
-}
-
 export interface FileChecksum {
-  $type: "blue.zio.atfile.upload#checksum";
+  $type: "net.altq.aqfile#checksum";
   algo?: string;
   hash?: string;
 }
 
 export interface FileMetadata {
-  $type: "blue.zio.atfile.upload#file";
+  $type: "net.altq.aqfile#file";
   name?: string;
   size?: number;
   mimeType?: string;
   modifiedAt?: string;
-}
-
-/**
- * Generate a machine fingerprint for upload tracking
- */
-export function generateFingerprint(version: string): MachineFingerprint {
-  const os = Deno.build.os;
-  const hostname = Deno.hostname();
-  const appName = `atfile-ts/${version}`;
-
-  // Generate a consistent machine ID based on hostname and OS
-  const machineId = crypto
-    .createHash("sha256")
-    .update(`${hostname}-${os}`)
-    .digest("hex")
-    .substring(0, 16);
-
-  return {
-    $type: "blue.zio.atfile.finger#machine",
-    app: appName,
-    host: hostname,
-    id: machineId,
-    os: os,
-  };
 }
 
 /**
@@ -62,7 +30,7 @@ export function calculateChecksum(
   const digest = hash.digest("hex");
 
   return {
-    $type: "blue.zio.atfile.upload#checksum",
+    $type: "net.altq.aqfile#checksum",
     algo,
     hash: digest,
   };
@@ -79,7 +47,7 @@ export async function getFileMetadata(
   const fileInfo = await Deno.stat(filePath);
 
   return {
-    $type: "blue.zio.atfile.upload#file",
+    $type: "net.altq.aqfile#file",
     name: fileName,
     size: fileInfo.size,
     mimeType,

@@ -1,5 +1,5 @@
 /**
- * ATfile - Upload files to AT Protocol PDS
+ * Aqfile - Upload files to AT Protocol PDS
  * Reimplementation in modern TypeScript using Deno runtime
  */
 
@@ -8,11 +8,7 @@ import { parseArgs } from "@std/cli";
 import { lookup } from "mime-types";
 import { AtpAgent } from "@atproto/api";
 import { getConfigPath, loadConfig } from "./config.ts";
-import {
-  calculateChecksum,
-  generateFingerprint,
-  getFileMetadata,
-} from "./utils.ts";
+import { calculateChecksum, getFileMetadata } from "./utils.ts";
 
 const VERSION = "0.1.0";
 
@@ -67,24 +63,20 @@ async function uploadFile(options: UploadOptions): Promise<UploadResult> {
   // Get file metadata
   const fileMetadata = await getFileMetadata(filePath, fileName, mimeType);
 
-  // Generate fingerprint
-  const fingerprint = generateFingerprint(VERSION);
-
   // Get DID
   const did = agent.session?.did;
   if (!did) {
     throw new Error("Could not determine DID from session");
   }
 
-  // Create record according to blue.zio.atfile.upload lexicon
-  const collection = "blue.zio.atfile.upload";
+  // Create record according to net.altq.aqfile.upload lexicon
+  const collection = "net.altq.aqfile.upload";
   const record: Record<string, unknown> = {
     $type: collection,
     blob,
     checksum,
     createdAt: new Date().toISOString(),
     file: fileMetadata,
-    finger: fingerprint,
   };
 
   console.log(`📝 Creating record in ${collection}...`);
@@ -108,25 +100,25 @@ async function uploadFile(options: UploadOptions): Promise<UploadResult> {
  */
 function showHelp(): void {
   console.log(`
-ATfile-ts v${VERSION}
+aqfile v${VERSION}
 Upload files to AT Protocol PDS
 
 Usage:
-  atfile upload <file>     Upload a file
-  atfile config            Show config file location
-  atfile help              Show this help
-  atfile version           Show version
+  aqfile upload <file>     Upload a file
+  aqfile config            Show config file location
+  aqfile help              Show this help
+  aqfile version           Show version
 
 Environment variables:
-  ATFILE_SERVICE           PDS service URL (default: https://bsky.social)
-  ATFILE_USERNAME          AT Protocol identifier (handle or DID)
-  ATFILE_PASSWORD          AT Protocol password or app password
+  AQFILE_SERVICE           PDS service URL (default: https://bsky.social)
+  AQFILE_USERNAME          AT Protocol identifier (handle or DID)
+  AQFILE_PASSWORD          AT Protocol password or app password
 
 Config file:
   Configuration can be stored in a JSON file at:
-  - Linux/Unix: ~/.config/atfile/config.json
-  - macOS: ~/Library/Application Support/atfile/config.json
-  - Windows: %APPDATA%\\atfile\\config.json
+  - Linux/Unix: ~/.config/aqfile/config.json
+  - macOS: ~/Library/Application Support/aqfile/config.json
+  - Windows: %APPDATA%\\aqfile\\config.json
 
   Example config.json:
   {
@@ -136,8 +128,8 @@ Config file:
   }
 
 Examples:
-  atfile upload document.pdf
-  atfile upload image.png --service https://my-pds.example.com
+  aqfile upload document.pdf
+  aqfile upload image.png --service https://my-pds.example.com
 `);
 }
 
@@ -165,7 +157,7 @@ async function main() {
 
   // Handle version
   if (args.version) {
-    console.log(`atfile-ts v${VERSION}`);
+    console.log(`aqfile v${VERSION}`);
     Deno.exit(0);
   }
 
@@ -177,7 +169,7 @@ async function main() {
   }
 
   if (command === "version") {
-    console.log(`atfile-ts v${VERSION}`);
+    console.log(`aqfile-ts v${VERSION}`);
     Deno.exit(0);
   }
 
@@ -202,7 +194,7 @@ async function main() {
     const filePath = args._[1]?.toString();
     if (!filePath) {
       console.error("Error: No file specified");
-      console.error("Usage: atfile upload <file>");
+      console.error("Usage: aqfile upload <file>");
       Deno.exit(1);
     }
 
@@ -223,7 +215,7 @@ async function main() {
 
     if (!config.identifier || !config.password) {
       console.error(
-        "Error: Credentials not provided. Set ATFILE_USERNAME and ATFILE_PASSWORD environment variables,",
+        "Error: Credentials not provided. Set AQFILE_USERNAME and AQFILE_PASSWORD environment variables,",
       );
       console.error(`       or create a config file at: ${getConfigPath()}`);
       Deno.exit(1);
@@ -247,7 +239,7 @@ async function main() {
     }
   } else {
     console.error(`Error: Unknown command: ${command}`);
-    console.error("Run 'atfile help' for usage information");
+    console.error("Run 'aqfile help' for usage information");
     Deno.exit(1);
   }
 }

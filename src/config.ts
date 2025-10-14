@@ -1,5 +1,5 @@
 /**
- * Configuration management for ATfile
+ * Configuration management for Aqfile
  * Supports loading config from multiple sources with precedence:
  * 1. CLI arguments (highest)
  * 2. Environment variables
@@ -22,24 +22,24 @@ export function getConfigPath(): string {
   const homeDir = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
 
   if (Deno.build.os === "darwin") {
-    // macOS: ~/Library/Application Support/atfile/config.json
+    // macOS: ~/Library/Application Support/aqfile/config.json
     return join(
       homeDir,
       "Library",
       "Application Support",
-      "atfile",
+      "aqfile",
       "config.json",
     );
   } else if (Deno.build.os === "windows") {
-    // Windows: %APPDATA%\atfile\config.json
+    // Windows: %APPDATA%\aqfile\config.json
     const appData = Deno.env.get("APPDATA") ||
       join(homeDir, "AppData", "Roaming");
-    return join(appData, "atfile", "config.json");
+    return join(appData, "aqfile", "config.json");
   } else {
-    // Linux/Unix: ~/.config/atfile/config.json or $XDG_CONFIG_HOME/atfile/config.json
+    // Linux/Unix: ~/.config/aqfile/config.json or $XDG_CONFIG_HOME/aqfile/config.json
     const configHome = Deno.env.get("XDG_CONFIG_HOME") ||
       join(homeDir, ".config");
-    return join(configHome, "atfile", "config.json");
+    return join(configHome, "aqfile", "config.json");
   }
 }
 
@@ -71,9 +71,9 @@ export async function loadConfigFile(): Promise<Config> {
  */
 export function loadEnvConfig(): Config {
   return {
-    service: Deno.env.get("ATFILE_SERVICE") || Deno.env.get("SERVICE"),
-    identifier: Deno.env.get("ATFILE_USERNAME") || Deno.env.get("IDENTIFIER"),
-    password: Deno.env.get("ATFILE_PASSWORD") || Deno.env.get("PASSWORD"),
+    service: Deno.env.get("AQFILE_SERVICE") || Deno.env.get("SERVICE"),
+    identifier: Deno.env.get("AQFILE_USERNAME") || Deno.env.get("IDENTIFIER"),
+    password: Deno.env.get("AQFILE_PASSWORD") || Deno.env.get("PASSWORD"),
   };
 }
 

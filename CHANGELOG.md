@@ -10,3 +10,5 @@
 - built CLI with @std/cli parseArgs
 - added configuration file support
 - added comprehensive test suite
+- rebranded as aqfile from atfile
+- simplified net.altq.aqfile lexicon
