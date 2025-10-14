@@ -7,7 +7,7 @@
  * 4. Defaults (lowest)
  */
 
-import { join } from "@std/path";
+import { dirname, join } from "@std/path";
 
 export interface Config {
   service?: string;
@@ -111,7 +111,7 @@ export async function loadConfig(cliConfig: Config = {}): Promise<Config> {
  */
 export async function saveConfig(config: Config): Promise<void> {
   const configPath = getConfigPath();
-  const configDir = configPath.substring(0, configPath.lastIndexOf("/"));
+  const configDir = dirname(configPath);
 
   // Create directory if it doesn't exist
   try {
