@@ -12,6 +12,7 @@
   },
   "imports": {
     "@atcute/lex-cli": "npm:@atcute/lex-cli@^2.2.2",
+    "@atcute/lexicons": "npm:@atcute/lexicons@^1.2.2",
     "@atproto/api": "npm:@atproto/api@^0.17.2",
     "@std/cli": "jsr:@std/cli@^1.0.23",
     "@std/expect": "jsr:@std/expect@^1.0.17",

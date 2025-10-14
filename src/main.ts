@@ -1,13 +1,5 @@
 // atfile-poc.ts
 // PoC: upload a file to an AT Protocol PDS and create a repo record referencing it.
-//
-// Usage (after building):
-//   SERVICE=https://bsky.social IDENTIFIER=your.handle PASSWORD=yourpass \
-//  node dist/atfile-poc.js /path/to/file.png
-//
-// Install:
-//   npm i @atproto/api mime-types
-//   tsc --init (if you need TS config), then compile with tsc
 
 import fs from "node:fs";
 import path from "node:path";
