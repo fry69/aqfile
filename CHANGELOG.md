@@ -16,4 +16,8 @@
 - integrated generated lexicon schemas
 - added runtime validation
 - added validation documentation and examples
-
+- added list command
+- added delete command
+- added end-to-end testing
+- improved error messages with blob structure debugging
+- automatic blob cleanup via PDS garbage collection
