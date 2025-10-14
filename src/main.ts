@@ -27,7 +27,7 @@ import { lookup } from "mime-types";
 import { AtpAgent } from "@atproto/api";
 import { getConfigPath, loadConfig } from "./config.ts";
 import { calculateChecksum, getFileMetadata } from "./utils.ts";
-import type { NetAltqAqfile } from "./lexicons/index.ts";
+import type { NetAltqAqfile } from "./types.ts";
 
 /** The current version of aqfile */
 const VERSION = "0.1.0";

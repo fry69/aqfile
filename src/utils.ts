@@ -27,7 +27,7 @@
  */
 
 import * as crypto from "node:crypto";
-import type { NetAltqAqfile } from "./lexicons/index.ts";
+import type { NetAltqAqfile } from "./types.ts";
 
 /**
  * File checksum structure from the lexicon schema

@@ -22,11 +22,9 @@
     "@std/path": "jsr:@std/path@^1.0.8",
     "mime-types": "npm:mime-types@^3.0.1"
   },
-  "lint": {
-    "exclude": [
-      "src/lexicons/"
-    ]
-  },
+  "exclude": [
+    "src/lexicons/"
+  ],
   "publish": {
     "include": [
       "deno.json",
