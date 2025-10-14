@@ -1,4 +1,10 @@
-### v0.1.0 (unreleased)
+### v0.1.1 (unreleased)
+
+- save credentials to config file after first run
+- cleanup credentials naming
+- add option to clear stored credentials
+
+### v0.1.0
 
 - initial non-functional snapshot
 - fix upload.json lexicon definition

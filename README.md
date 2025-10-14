@@ -14,7 +14,7 @@ Upload files to AT Protocol PDS with metadata and checksums.
 ## Installation
 
 ```bash
-deno install -A -n aqfile jsr:@fry69/aqfile
+deno install --global -A -n aqfile jsr:@fry69/aqfile
 ```
 
 Or run directly:
