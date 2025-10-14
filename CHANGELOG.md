@@ -26,3 +26,5 @@
 - cleanup README
 - remove unused dependencies
 - prepare for publishing on jsr.io
+- do not publish lexicons to jsr.io see
+  https://github.com/denoland/deno/issues/23427
