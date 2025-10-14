@@ -1,6 +1,24 @@
 /**
- * Aqfile - Upload files to AT Protocol PDS
- * Reimplementation in modern TypeScript using Deno runtime
+ * Aqfile CLI - Upload, list, and manage files on AT Protocol PDS
+ *
+ * This module provides a command-line interface for managing file uploads to
+ * AT Protocol Personal Data Servers (PDS). It supports uploading files with
+ * metadata and checksums, listing all uploaded files, and deleting files.
+ *
+ * @example
+ * ```ts
+ * // Upload a file
+ * import { uploadFile } from "./main.ts";
+ *
+ * await uploadFile({
+ *   serviceUrl: "https://bsky.social",
+ *   identifier: "alice.bsky.social",
+ *   password: "app-password",
+ *   filePath: "./document.pdf"
+ * });
+ * ```
+ *
+ * @module
  */
 
 import { basename } from "@std/path";
@@ -11,39 +29,90 @@ import { getConfigPath, loadConfig } from "./config.ts";
 import { calculateChecksum, getFileMetadata } from "./utils.ts";
 import type { NetAltqAqfile } from "./lexicons/index.ts";
 
+/** The current version of aqfile */
 const VERSION = "0.1.0";
 
+/**
+ * Options for uploading a file to the PDS
+ */
 interface UploadOptions {
+  /** The URL of the PDS service (e.g., "https://bsky.social") */
   serviceUrl: string;
+  /** AT Protocol handle or DID for authentication */
   identifier: string;
+  /** AT Protocol password or app password */
   password: string;
+  /** Path to the file to upload */
   filePath: string;
 }
 
+/**
+ * Result returned after successfully uploading a file
+ */
 interface UploadResult {
+  /** The uploaded blob reference */
   blob: unknown;
+  /** The created record information */
   record: {
+    /** The AT URI of the created record */
     uri: string;
+    /** The CID (Content Identifier) of the record */
     cid: string;
   };
 }
 
+/**
+ * Options for deleting a file record from the PDS
+ */
 interface DeleteOptions {
+  /** The URL of the PDS service */
   serviceUrl: string;
+  /** AT Protocol handle or DID for authentication */
   identifier: string;
+  /** AT Protocol password or app password */
   password: string;
+  /** The record key (rkey) of the file to delete */
   rkey: string;
 }
 
+/**
+ * Options for listing file records from the PDS
+ */
 interface ListOptions {
+  /** The URL of the PDS service */
   serviceUrl: string;
+  /** AT Protocol handle or DID for authentication */
   identifier: string;
+  /** AT Protocol password or app password */
   password: string;
+  /** Maximum number of records to retrieve. Defaults to 100 */
   limit?: number;
 }
 
 /**
  * Upload a file to AT Protocol PDS and create a record
+ *
+ * This function handles the complete upload workflow:
+ * 1. Authenticates with the PDS
+ * 2. Reads and uploads the file as a blob
+ * 3. Calculates file checksum (SHA256)
+ * 4. Gathers file metadata
+ * 5. Creates a net.altq.aqfile record with all information
+ *
+ * @param options - Upload configuration options
+ * @returns A promise that resolves to the upload result containing blob and record info
+ * @throws {Error} If authentication fails, file is not found, or record creation fails
+ *
+ * @example
+ * ```ts
+ * const result = await uploadFile({
+ *   serviceUrl: "https://bsky.social",
+ *   identifier: "alice.bsky.social",
+ *   password: "app-password",
+ *   filePath: "./photo.jpg"
+ * });
+ * console.log(`Uploaded: ${result.record.uri}`);
+ * ```
  */
 async function uploadFile(options: UploadOptions): Promise<UploadResult> {
   const { serviceUrl, identifier, password, filePath } = options;
@@ -123,6 +192,28 @@ async function uploadFile(options: UploadOptions): Promise<UploadResult> {
 
 /**
  * List all aqfile records for the authenticated user
+ *
+ * Retrieves and displays all file records stored under the net.altq.aqfile
+ * collection for the authenticated user. The output is formatted as a table
+ * showing the record key, file size, MIME type, and filename.
+ *
+ * @param options - List configuration options including authentication and limit
+ * @returns A promise that resolves when the list is displayed
+ * @throws {Error} If authentication fails or the PDS is unreachable
+ *
+ * @example
+ * ```ts
+ * await listRecords({
+ *   serviceUrl: "https://bsky.social",
+ *   identifier: "alice.bsky.social",
+ *   password: "app-password",
+ *   limit: 50
+ * });
+ * // Outputs:
+ * // RKEY          SIZE        MIME TYPE                    NAME
+ * // ─────────────────────────────────────────────────────────────────
+ * // 3m35jjrc5b62d 43B         text/plain                   test.txt
+ * ```
  */
 async function listRecords(options: ListOptions): Promise<void> {
   const { serviceUrl, identifier, password, limit = 100 } = options;
@@ -201,6 +292,30 @@ async function listRecords(options: ListOptions): Promise<void> {
 
 /**
  * Delete an aqfile record and its associated blob
+ *
+ * Removes a file record from the PDS by its record key (rkey). The associated
+ * blob will be marked for garbage collection by the PDS. Note that the actual
+ * blob deletion is handled by the PDS garbage collector and occurs when no other
+ * records reference the blob.
+ *
+ * @param options - Delete configuration options including authentication and rkey
+ * @returns A promise that resolves when the record is deleted
+ * @throws {Error} If authentication fails, record is not found, or deletion fails
+ *
+ * @example
+ * ```ts
+ * await deleteRecord({
+ *   serviceUrl: "https://bsky.social",
+ *   identifier: "alice.bsky.social",
+ *   password: "app-password",
+ *   rkey: "3m35jjrc5b62d"
+ * });
+ * // Outputs:
+ * // ✓ Logged in as alice.bsky.social
+ * // 🗑  Deleting record 3m35jjrc5b62d...
+ * // ✓ Record deleted
+ * // ℹ  Blob bafkreic... will be cleaned up by PDS garbage collection
+ * ```
  */
 async function deleteRecord(options: DeleteOptions): Promise<void> {
   const { serviceUrl, identifier, password, rkey } = options;
@@ -260,7 +375,10 @@ async function deleteRecord(options: DeleteOptions): Promise<void> {
 }
 
 /**
- * Display help message
+ * Display help message showing all available commands and options
+ *
+ * Prints comprehensive usage information including commands, environment
+ * variables, configuration file format, and examples.
  */
 function showHelp(): void {
   console.log(`
@@ -303,6 +421,9 @@ Examples:
 
 /**
  * Main CLI entry point
+ *
+ * Parses command-line arguments and routes to the appropriate command handler.
+ * Supports: upload, list, delete, config, help, and version commands.
  */
 async function main() {
   const args = parseArgs(Deno.args, {
