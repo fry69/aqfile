@@ -1,4 +1,4 @@
-### v0.1.1 (unreleased)
+### v0.1.1
 
 - save credentials to config file after first run
 - cleanup credentials naming
