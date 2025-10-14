@@ -209,7 +209,14 @@ export async function loadConfig(cliConfig: Config = {}): Promise<Config> {
   const fileConfig = await loadConfigFile();
   const envConfig = loadEnvConfig();
 
-  return mergeConfigs(defaults, fileConfig, envConfig, cliConfig);
+  const merged = mergeConfigs(defaults, fileConfig, envConfig, cliConfig);
+
+  // Normalize service URL if present
+  if (merged.service) {
+    merged.service = await normalizeServiceUrl(merged.service);
+  }
+
+  return merged;
 }
 
 /**
@@ -313,6 +320,92 @@ async function promptUser(prompt: string, defaultValue = ""): Promise<string> {
 }
 
 /**
+ * Normalize and validate a service URL
+ *
+ * Handles several cases:
+ * - Adds "https://" if no protocol specified
+ * - In interactive mode: prompts to convert "http://" to "https://"
+ * - In non-interactive mode: rejects "http://" URLs
+ * - Validates URL format
+ *
+ * @param url - The URL to normalize (may be undefined)
+ * @param interactive - Whether we're in an interactive terminal (defaults to checking TTY)
+ * @returns Normalized URL or undefined if input was undefined
+ * @throws {Error} If URL is invalid or uses unsupported protocol in non-interactive mode
+ *
+ * @example
+ * ```ts
+ * // Auto-add https://
+ * await normalizeServiceUrl("bsky.social", false);
+ * // Returns: "https://bsky.social"
+ *
+ * // Reject http:// in non-interactive mode
+ * await normalizeServiceUrl("http://example.com", false);
+ * // Throws: Error
+ *
+ * // Prompt in interactive mode
+ * await normalizeServiceUrl("http://example.com", true);
+ * // Prompts user, may return "https://example.com"
+ * ```
+ */
+export async function normalizeServiceUrl(
+  url: string | undefined,
+  interactive = isInteractive(),
+): Promise<string | undefined> {
+  if (!url) return undefined;
+
+  let normalizedUrl = url.trim();
+
+  // If no protocol specified, add https://
+  if (!normalizedUrl.match(/^https?:\/\//i)) {
+    normalizedUrl = `https://${normalizedUrl}`;
+  }
+
+  // Check for http:// (insecure)
+  if (normalizedUrl.match(/^http:\/\//i)) {
+    if (interactive) {
+      console.log(
+        "\n⚠️  Warning: Insecure HTTP protocol detected!",
+      );
+      console.log(
+        "   AT Protocol services should use HTTPS for security.\n",
+      );
+
+      const response = await promptUser(
+        "Convert to HTTPS? (y/n)",
+        "y",
+      );
+
+      if (
+        response.toLowerCase() === "y" || response.toLowerCase() === "yes"
+      ) {
+        normalizedUrl = normalizedUrl.replace(/^http:\/\//i, "https://");
+        console.log(`✓ Using: ${normalizedUrl}\n`);
+      } else {
+        throw new Error(
+          "HTTP protocol is not supported. AT Protocol requires HTTPS for security.",
+        );
+      }
+    } else {
+      throw new Error(
+        "HTTP protocol is not supported. AT Protocol requires HTTPS for security. Please use https:// instead.",
+      );
+    }
+  }
+
+  // Validate URL format
+  try {
+    new URL(normalizedUrl);
+  } catch {
+    throw new Error(
+      `Invalid service URL: "${url}". Please provide a valid URL (e.g., "https://bsky.social").`,
+    );
+  }
+
+  return normalizedUrl;
+}
+
+/**
  * Prompt user to set up credentials interactively
  *
  * Only works in interactive terminals. Prompts for service, handle, and app password,
@@ -332,10 +425,13 @@ export async function promptForConfig(): Promise<Config> {
   console.log("\n🔧 aqfile Configuration Setup");
   console.log("================================\n");
 
-  const service = await promptUser(
+  const serviceInput = await promptUser(
     "PDS service URL",
     "https://bsky.social",
   );
+
+  // Normalize the service URL (interactive mode)
+  const service = await normalizeServiceUrl(serviceInput, true);
 
   const handle = await promptUser(
     "Your handle (e.g., alice.bsky.social)",

@@ -2,6 +2,7 @@
   "version": "5",
   "specifiers": {
     "jsr:@std/assert@^1.0.14": "1.0.15",
+    "jsr:@std/assert@^1.0.15": "1.0.15",
     "jsr:@std/cli@^1.0.23": "1.0.23",
     "jsr:@std/expect@^1.0.17": "1.0.17",
     "jsr:@std/internal@^1.0.10": "1.0.12",
@@ -29,7 +30,7 @@
     "@std/expect@1.0.17": {
       "integrity": "316b47dd65c33e3151344eb3267bf42efba17d1415425f07ed96185d67fc04d9",
       "dependencies": [
-        "jsr:@std/assert",
+        "jsr:@std/assert@^1.0.14",
         "jsr:@std/internal@^1.0.10"
       ]
     },
@@ -178,6 +179,7 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@std/assert@^1.0.15",
       "jsr:@std/cli@^1.0.23",
       "jsr:@std/expect@^1.0.17",
       "jsr:@std/path@^1.0.8",

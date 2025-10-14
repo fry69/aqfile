@@ -3,6 +3,7 @@
 - save credentials to config file after first run
 - cleanup credentials naming
 - add option to clear stored credentials
+- smart URL normalization for service URLs
 
 ### v0.1.0
 

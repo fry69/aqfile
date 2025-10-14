@@ -10,13 +10,14 @@
     "test": "deno test -A --ignore=tests/e2e.test.ts",
     "test:e2e": "deno test --env-file=./.env.e2e -A tests/e2e.test.ts",
     "aqfile:e2e": "deno run --env-file=./.env.e2e -A ./src/main.ts",
-    "aqfile": "deno run --env-file=./.env -A ./src/main.ts",
+    "aqfile": "deno run -A ./src/main.ts",
     "lex": "lex-cli generate -c ./lex.config.ts"
   },
   "imports": {
     "@atcute/lex-cli": "npm:@atcute/lex-cli@^2.2.2",
     "@atcute/lexicons": "npm:@atcute/lexicons@^1.2.2",
     "@atproto/api": "npm:@atproto/api@^0.17.2",
+    "@std/assert": "jsr:@std/assert@^1.0.15",
     "@std/cli": "jsr:@std/cli@^1.0.23",
     "@std/expect": "jsr:@std/expect@^1.0.17",
     "@std/path": "jsr:@std/path@^1.0.8",
