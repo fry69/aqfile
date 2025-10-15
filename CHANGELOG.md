@@ -1,3 +1,8 @@
+### v0.1.4 (unreleased)
+
+- remove unnecessary docs
+- move generated lexicon out of src/
+
 ### v0.1.3
 
 - mention interactive setup in README

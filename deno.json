@@ -27,7 +27,7 @@
     "mime-types": "npm:mime-types@^3.0.1"
   },
   "exclude": [
-    "src/lexicons/"
+    "lexicons/"
   ],
   "publish": {
     "include": [
@@ -36,9 +36,6 @@
       "LICENSE",
       "README.md",
       "CHANGELOG.md"
-    ],
-    "exclude": [
-      "src/lexicons/"
     ]
   }
 }
