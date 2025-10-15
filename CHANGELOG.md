@@ -3,6 +3,7 @@
 - remove unnecessary docs
 - move generated lexicon out of src/
 - fix e2e tests
+- fix security problem inpublish workflow
 
 ### v0.1.3
 

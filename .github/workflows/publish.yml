@@ -5,10 +5,14 @@ on:
       - "CI" # must match the CI workflow's `name:` exactly
     types:
       - completed
+    branches:
+      - main # Only run when CI completes on main branch
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Additional safety check: only run if CI succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     permissions:
       contents: read
