@@ -13,7 +13,7 @@
 import { expect } from "@std/expect";
 import { join } from "@std/path";
 import { AtpAgent } from "@atproto/api";
-import type { NetAltqAqfile } from "../src/lexicons/index.ts";
+import type { NetAltqAqfile } from "../src/types.ts";
 import { calculateChecksum, getFileMetadata } from "../src/utils.ts";
 
 const SERVICE = Deno.env.get("AQFILE_SERVICE") || "https://bsky.social";

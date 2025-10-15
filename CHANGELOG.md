@@ -2,6 +2,7 @@
 
 - remove unnecessary docs
 - move generated lexicon out of src/
+- fix e2e tests
 
 ### v0.1.3
 
